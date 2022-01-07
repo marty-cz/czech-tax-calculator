@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/marty-cz/czech-tax-calculator/internal/ingest"
+	"github.com/marty-cz/czech-tax-calculator/internal/tax"
 )
 
 func init() {
@@ -25,9 +26,16 @@ func main() {
 	flag.Parse()
 
 	if *stockInputPath != "" {
-		err := ingest.ProcessStocks(*stockInputPath)
+		transactions, err := ingest.ProcessStocks(*stockInputPath)
 		if err != nil {
 			log.Errorf("Cannot ingest stock input file '%s' due to: %s", *stockInputPath, err)
+		} else {
+			taxReport, err := tax.Calculate(transactions, "2020")
+			if err != nil {
+				log.Errorf("Cannot create tax report due to: %s", *stockInputPath, err)
+			} else {
+				log.Debug(taxReport)
+			}
 		}
 	}
 
