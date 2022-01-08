@@ -45,9 +45,9 @@ var (
 )
 
 type TransactionLog struct {
-	Purchases []*TransactionLogItem
-	Sales     []*TransactionLogItem
-	Dividends []*TransactionLogItem
+	Purchases TransactionLogItems
+	Sales     TransactionLogItems
+	Dividends TransactionLogItems
 }
 
 type TransactionType int64
@@ -75,9 +75,24 @@ type TransactionLogItem struct {
 	// name of Broker who backed the operation
 	Broker string
 	// Currency used to buy the item (USD, EUR, CZK, ...)
-	Currency string
+	Currency *util.Currency
+	// Exchange rate to CZK in the day of a transaction
+	ExchangeRate float64
 	// type of transaction
 	Operation TransactionType
+}
+
+type TransactionLogItems []*TransactionLogItem
+
+func (items *TransactionLogItems) String() string {
+	s := "["
+	for i, item := range *items {
+		if i > 0 {
+			s += ", "
+		}
+		s += fmt.Sprintf("%+v", item)
+	}
+	return s + "]"
 }
 
 type newTransactionItem func([]string) (*TransactionLogItem, error)
@@ -109,8 +124,11 @@ func newBuyItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.Quantity, err = strconv.ParseFloat(row[BUY_TABLE_LEGEND["QUANTITY"]], 64); err != nil {
 		return nil, fmt.Errorf("quantity is not a number: %s", err)
 	}
-	if item.Currency, err = util.ConvertCurrency(row[BUY_TABLE_LEGEND["CURRENCY"]]); err != nil {
+	if item.Currency, err = util.GetCurrencyByName(row[BUY_TABLE_LEGEND["CURRENCY"]]); err != nil {
 		return nil, fmt.Errorf("currency format problem: %s", err)
+	}
+	if item.ExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
+		return nil, fmt.Errorf("cannot get exchange rate for %v from %v: %s", item.Currency, item.Date, err)
 	}
 	return &item, nil
 }
@@ -142,8 +160,11 @@ func newSellItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.Quantity, err = strconv.ParseFloat(row[SELL_TABLE_LEGEND["QUANTITY"]], 64); err != nil {
 		return nil, fmt.Errorf("quantity is not a number: %s", err)
 	}
-	if item.Currency, err = util.ConvertCurrency(row[SELL_TABLE_LEGEND["CURRENCY"]]); err != nil {
+	if item.Currency, err = util.GetCurrencyByName(row[SELL_TABLE_LEGEND["CURRENCY"]]); err != nil {
 		return nil, fmt.Errorf("currency format problem: %s", err)
+	}
+	if item.ExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
+		return nil, fmt.Errorf("cannot get exchange rate for %v from %v: %s", item.Currency, item.Date, err)
 	}
 	return &item, nil
 }
@@ -166,8 +187,11 @@ func newDividendItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.BrokerAmount, err = strconv.ParseFloat(row[DIVIDEND_TABLE_LEGEND["AMOUNT"]], 64); err != nil {
 		return nil, fmt.Errorf("amount is not a number: %s", err)
 	}
-	if item.Currency, err = util.ConvertCurrency(row[DIVIDEND_TABLE_LEGEND["CURRENCY"]]); err != nil {
+	if item.Currency, err = util.GetCurrencyByName(row[DIVIDEND_TABLE_LEGEND["CURRENCY"]]); err != nil {
 		return nil, fmt.Errorf("currency format problem: %s", err)
+	}
+	if item.ExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
+		return nil, fmt.Errorf("cannot get exchange rate for %v from %v: %s", item.Currency, item.Date, err)
 	}
 	return &item, nil
 }
@@ -203,13 +227,13 @@ func ProcessStocks(filePath string) (_ *TransactionLog, err error) {
 	return &transactions, nil
 }
 
-func processSheet(excelFile *excel.File, sheetName string, legend map[string]int, newItemFunction newTransactionItem) (transactions []*TransactionLogItem, err error) {
+func processSheet(excelFile *excel.File, sheetName string, legend map[string]int, newItemFunction newTransactionItem) (transactions TransactionLogItems, err error) {
 	rows, err := excelFile.GetRows(sheetName, excel.Options{RawCellValue: true})
 	if err != nil {
 		return nil, fmt.Errorf("sheet '%s': %s", sheetName, err)
 	}
 
-	transactions = make([]*TransactionLogItem, 0)
+	transactions = make(TransactionLogItems, 0)
 	for rowNo, row := range rows {
 		if rowNo == 0 {
 			if err := util.ValidateTableHeader(row, legend); err != nil {
