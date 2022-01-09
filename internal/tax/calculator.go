@@ -31,15 +31,20 @@ func (item *ItemToSell) String() string {
 type ItemToSellCollection []*ItemToSell
 
 type SellOperation struct {
-	sellItem     *ingest.TransactionLogItem
-	soldItems    ingest.TransactionLogItems
-	fifoBuyPrice float64
-	fifoBuyFee   float64
-	currency     *util.Currency
+	sellItem                         *ingest.TransactionLogItem
+	soldItems                        ingest.TransactionLogItems
+	fifoBuyPriceWithDayExchangeRate  float64
+	fifoBuyFeeWithDayExchangeRate    float64
+	fifoBuyPriceWithYearExchangeRate float64
+	fifoBuyFeeWithYearExchangeRate   float64
+	currency                         *util.Currency
 }
 
 func (item *SellOperation) String() string {
-	return fmt.Sprintf("sellItem:%+v fifoBuyPrice:%v fifoBuyFee:%v currency:%v soldItems:%+v", item.sellItem, item.fifoBuyPrice, item.fifoBuyFee, item.currency, &item.soldItems)
+	return fmt.Sprintf("sellItem:%+v fifoBuyPriceDayExchange:%v fifoBuyFeeDayExchang:%v fifoBuyPriceYearExchange:%v fifoBuyFeeYearExchang:%v currency:%v soldItems:%+v",
+		item.sellItem,
+		item.fifoBuyPriceWithDayExchangeRate, item.fifoBuyFeeWithDayExchangeRate, item.fifoBuyPriceWithYearExchangeRate, item.fifoBuyFeeWithYearExchangeRate,
+		item.currency, &item.soldItems)
 }
 
 type SellOperationCollection []*SellOperation
@@ -84,8 +89,10 @@ func Calculate(transactions *ingest.TransactionLog, year string) (tax *Tax, err 
 // itemToSell.buyItem.BrokerAmount and itemToSell.buyItem.BankAmount
 // TODO2: Should be the prices/fees calculated for local currency (CZK) instead?
 func processSell(sellOp *SellOperation, availableBuyItems ItemToSellCollection) {
-	buyPrice := 0.0
-	buyFee := 0.0
+	buyPriceWithDayExchangeRate := 0.0
+	buyFeeWithDayExchangeRate := 0.0
+	buyPriceWithYearExchangeRate := 0.0
+	buyFeeWithYearExchangeRate := 0.0
 	quantityToBeSold := sellOp.sellItem.Quantity
 	for _, itemToSell := range availableBuyItems {
 		if itemToSell.availableQuantity <= 0.0 {
@@ -95,10 +102,17 @@ func processSell(sellOp *SellOperation, availableBuyItems ItemToSellCollection) 
 		if newAvailableQuantity >= 0.0 {
 			// sell operation has all buys processed
 			itemToSell.availableQuantity = newAvailableQuantity
-			buyPrice += quantityToBeSold * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.ExchangeRate
-			buyFee += quantityToBeSold * itemToSell.buyItem.Fee * itemToSell.buyItem.ExchangeRate
-			sellOp.fifoBuyPrice = buyPrice / sellOp.sellItem.Quantity
-			sellOp.fifoBuyFee = buyFee / sellOp.sellItem.Quantity
+
+			buyPriceWithDayExchangeRate += quantityToBeSold * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.DayExchangeRate
+			buyFeeWithDayExchangeRate += quantityToBeSold * itemToSell.buyItem.Fee * itemToSell.buyItem.DayExchangeRate
+			sellOp.fifoBuyPriceWithDayExchangeRate = buyPriceWithDayExchangeRate / sellOp.sellItem.Quantity
+			sellOp.fifoBuyFeeWithDayExchangeRate = buyFeeWithDayExchangeRate / sellOp.sellItem.Quantity
+
+			buyPriceWithYearExchangeRate += quantityToBeSold * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.YearExchangeRate
+			buyFeeWithYearExchangeRate += quantityToBeSold * itemToSell.buyItem.Fee * itemToSell.buyItem.YearExchangeRate
+			sellOp.fifoBuyPriceWithYearExchangeRate = buyPriceWithYearExchangeRate / sellOp.sellItem.Quantity
+			sellOp.fifoBuyFeeWithYearExchangeRate = buyFeeWithYearExchangeRate / sellOp.sellItem.Quantity
+
 			sellOp.soldItems = append(sellOp.soldItems, itemToSell.buyItem)
 			itemToSell.soldByItems = append(itemToSell.soldByItems, sellOp.sellItem)
 			return
@@ -106,8 +120,12 @@ func processSell(sellOp *SellOperation, availableBuyItems ItemToSellCollection) 
 			// some buy item are still required to be sold by this sell operation
 			quantityToBeSold -= itemToSell.availableQuantity
 			itemToSell.availableQuantity = 0.0
-			buyPrice += itemToSell.buyItem.Quantity * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.ExchangeRate
-			buyFee += itemToSell.buyItem.Quantity * itemToSell.buyItem.Fee * itemToSell.buyItem.ExchangeRate
+
+			buyPriceWithDayExchangeRate += itemToSell.buyItem.Quantity * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.DayExchangeRate
+			buyFeeWithDayExchangeRate += itemToSell.buyItem.Quantity * itemToSell.buyItem.Fee * itemToSell.buyItem.DayExchangeRate
+
+			buyPriceWithYearExchangeRate += itemToSell.buyItem.Quantity * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.YearExchangeRate
+			buyFeeWithYearExchangeRate += itemToSell.buyItem.Quantity * itemToSell.buyItem.Fee * itemToSell.buyItem.YearExchangeRate
 		}
 	}
 }

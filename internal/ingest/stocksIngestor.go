@@ -77,7 +77,9 @@ type TransactionLogItem struct {
 	// Currency used to buy the item (USD, EUR, CZK, ...)
 	Currency *util.Currency
 	// Exchange rate to CZK in the day of a transaction
-	ExchangeRate float64
+	DayExchangeRate float64
+	// Exchange rate to CZK in the year of a transaction
+	YearExchangeRate float64
 	// type of transaction
 	Operation TransactionType
 }
@@ -127,8 +129,11 @@ func newBuyItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.Currency, err = util.GetCurrencyByName(row[BUY_TABLE_LEGEND["CURRENCY"]]); err != nil {
 		return nil, fmt.Errorf("currency format problem: %s", err)
 	}
-	if item.ExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
-		return nil, fmt.Errorf("cannot get exchange rate for %v from %v: %s", item.Currency, item.Date, err)
+	if item.DayExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
+		return nil, fmt.Errorf("cannot get day exchange rate for %v from %v: %s", item.Currency, item.Date, err)
+	}
+	if item.YearExchangeRate, err = util.GetCzkExchangeRateInYear(item.Date, *item.Currency); err != nil {
+		return nil, fmt.Errorf("cannot get year exchange rate for %v from %v: %s", item.Currency, item.Date, err)
 	}
 	return &item, nil
 }
@@ -163,8 +168,11 @@ func newSellItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.Currency, err = util.GetCurrencyByName(row[SELL_TABLE_LEGEND["CURRENCY"]]); err != nil {
 		return nil, fmt.Errorf("currency format problem: %s", err)
 	}
-	if item.ExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
+	if item.DayExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
 		return nil, fmt.Errorf("cannot get exchange rate for %v from %v: %s", item.Currency, item.Date, err)
+	}
+	if item.YearExchangeRate, err = util.GetCzkExchangeRateInYear(item.Date, *item.Currency); err != nil {
+		return nil, fmt.Errorf("cannot get year exchange rate for %v from %v: %s", item.Currency, item.Date, err)
 	}
 	return &item, nil
 }
@@ -190,8 +198,11 @@ func newDividendItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.Currency, err = util.GetCurrencyByName(row[DIVIDEND_TABLE_LEGEND["CURRENCY"]]); err != nil {
 		return nil, fmt.Errorf("currency format problem: %s", err)
 	}
-	if item.ExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
+	if item.DayExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
 		return nil, fmt.Errorf("cannot get exchange rate for %v from %v: %s", item.Currency, item.Date, err)
+	}
+	if item.YearExchangeRate, err = util.GetCzkExchangeRateInYear(item.Date, *item.Currency); err != nil {
+		return nil, fmt.Errorf("cannot get year exchange rate for %v from %v: %s", item.Currency, item.Date, err)
 	}
 	return &item, nil
 }
