@@ -30,11 +30,11 @@ func main() {
 		if err != nil {
 			log.Errorf("Cannot ingest stock input file '%s' due to: %s", *stockInputPath, err)
 		} else {
-			taxReport, err := tax.Calculate(transactions, "2020")
+			taxReport, err := tax.Calculate(transactions, "2021")
 			if err != nil {
 				log.Errorf("Cannot create tax report due to: %s", *stockInputPath, err)
 			} else {
-				log.Debug(taxReport)
+				log.Infof("%+v", taxReport)
 			}
 		}
 	}

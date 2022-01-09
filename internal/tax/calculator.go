@@ -49,25 +49,56 @@ func (item *SellOperation) String() string {
 
 type SellOperationCollection []*SellOperation
 
-type Tax struct {
+type Report struct {
+	sellOperations                      SellOperationCollection
+	revenueWithDayExchangeRate          float64
+	dividendRevenueWithDayExchangeRate  float64
+	expenseWithDayExchangeRate          float64
+	feeWithDayExchangeRate              float64
+	revenueWithYearExchangeRate         float64
+	dividendRevenueWithYearExchangeRate float64
+	expenseWithYearExchangeRate         float64
+	feeWithYearExchangeRate             float64
+	currency                            *util.Currency
+	year                                time.Time
 }
 
-func Calculate(transactions *ingest.TransactionLog, year string) (tax *Tax, err error) {
+func (item *Report) String() string {
+	return fmt.Sprintf("year: %d sellOpsCount:%d withDayExchangeRate:( expense:%v fee:%v revenue:%v (dividend:%v) ) withYearExchangeRate:( expense:%v fee:%v revenue:%v (dividend:%v) ) currency:%v",
+		item.year.Year(), len(item.sellOperations),
+		item.expenseWithDayExchangeRate, item.feeWithDayExchangeRate, item.revenueWithDayExchangeRate, item.dividendRevenueWithDayExchangeRate,
+		item.expenseWithYearExchangeRate, item.feeWithYearExchangeRate, item.revenueWithYearExchangeRate, item.dividendRevenueWithYearExchangeRate,
+		item.currency)
+}
 
-	var (
-		dateStart, dateEnd time.Time
-	)
+func Calculate(transactions *ingest.TransactionLog, currentTaxYearString string) (reports []*Report, err error) {
 
-	year = strings.TrimSpace(year)
-	layout := "02.01.2006 15:04:05"
-	if dateStart, err = time.Parse(layout, "01.01."+year+" 00:00:00"); err != nil {
-		return nil, fmt.Errorf("invalid year '%s'", year)
-	}
-	if dateEnd, err = time.Parse(layout, "31.12."+year+" 23:59:59"); err != nil {
-		return nil, fmt.Errorf("invalid year '%s", year)
+	currentTaxYear, err := util.GetYearFromString(currentTaxYearString)
+	if err != nil {
+		return nil, err
 	}
 
 	sortByDate(transactions)
+	oldestSellTransactionYear := currentTaxYear
+	if len(transactions.Sales) > 0 {
+		oldestSellTransactionYear = transactions.Sales[0].Date.Year()
+	}
+	for year := oldestSellTransactionYear; year <= currentTaxYear; year++ {
+		inYearSellOperations, dateStart, dateEnd, err := process(transactions, year)
+		if err != nil {
+			return nil, fmt.Errorf("calculation for year '%v' failed: %v", year, err)
+		}
+		inYearDividends := getDividendsInYear(transactions.Dividends, dateStart, dateEnd)
+		reports = append(reports, calculateReport(inYearSellOperations, inYearDividends, dateStart))
+	}
+
+	return
+}
+
+func process(transactions *ingest.TransactionLog, year int) (SellOperationCollection, time.Time, time.Time, error) {
+	layout := "02.01.2006 15:04:05"
+	dateStart, _ := time.Parse(layout, fmt.Sprintf("01.01.%d 00:00:00", year))
+	dateEnd, _ := time.Parse(layout, fmt.Sprintf("31.12.%d 23:59:59", year))
 
 	itemsToSell := convertToItemsToSell(transactions.Purchases)
 	sellOperations := convertToSellOperations(transactions.Sales)
@@ -77,18 +108,42 @@ func Calculate(transactions *ingest.TransactionLog, year string) (tax *Tax, err 
 	for _, sellOp := range inYearSellOperations {
 		availableBuyItems := getAvailableItemsToSell(itemsToSell, sellOp.sellItem)
 		log.Debugf("For '%s' : %v", sellOp.sellItem.Name, availableBuyItems)
-		processSell(sellOp, availableBuyItems)
+		calculateSellExpense(sellOp, availableBuyItems)
 		log.Debugf("Processed '%+v'", sellOp)
 	}
+	return inYearSellOperations, dateStart, dateEnd, nil
+}
 
-	return &Tax{}, nil
+func calculateReport(sellOps SellOperationCollection, dividends ingest.TransactionLogItems, year time.Time) *Report {
+	report := Report{
+		sellOperations: sellOps,
+		year:           year,
+		currency:       util.CZK,
+	}
+
+	for _, sellOp := range sellOps {
+		report.expenseWithDayExchangeRate += sellOp.fifoBuyPriceWithDayExchangeRate
+		report.revenueWithDayExchangeRate += sellOp.sellItem.BrokerAmount * sellOp.sellItem.DayExchangeRate
+		report.feeWithDayExchangeRate += sellOp.sellItem.Fee*sellOp.sellItem.DayExchangeRate + sellOp.fifoBuyFeeWithDayExchangeRate
+
+		report.expenseWithYearExchangeRate += sellOp.fifoBuyPriceWithYearExchangeRate
+		report.revenueWithYearExchangeRate += sellOp.sellItem.BrokerAmount * sellOp.sellItem.YearExchangeRate
+		report.feeWithYearExchangeRate += sellOp.sellItem.Fee*sellOp.sellItem.YearExchangeRate + sellOp.fifoBuyFeeWithYearExchangeRate
+	}
+
+	for _, dividend := range dividends {
+		report.dividendRevenueWithDayExchangeRate += dividend.BrokerAmount * dividend.DayExchangeRate
+		report.dividendRevenueWithYearExchangeRate += dividend.BrokerAmount * dividend.YearExchangeRate
+	}
+
+	return &report
 }
 
 // TODO: Should be the calculation of fifo buy price/fee rather based on
 // percentage of sold buy item quantity? Because we have available data for
 // itemToSell.buyItem.BrokerAmount and itemToSell.buyItem.BankAmount
 // TODO2: Should be the prices/fees calculated for local currency (CZK) instead?
-func processSell(sellOp *SellOperation, availableBuyItems ItemToSellCollection) {
+func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCollection) {
 	buyPriceWithDayExchangeRate := 0.0
 	buyFeeWithDayExchangeRate := 0.0
 	buyPriceWithYearExchangeRate := 0.0
@@ -105,13 +160,13 @@ func processSell(sellOp *SellOperation, availableBuyItems ItemToSellCollection) 
 
 			buyPriceWithDayExchangeRate += quantityToBeSold * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.DayExchangeRate
 			buyFeeWithDayExchangeRate += quantityToBeSold * itemToSell.buyItem.Fee * itemToSell.buyItem.DayExchangeRate
-			sellOp.fifoBuyPriceWithDayExchangeRate = buyPriceWithDayExchangeRate / sellOp.sellItem.Quantity
-			sellOp.fifoBuyFeeWithDayExchangeRate = buyFeeWithDayExchangeRate / sellOp.sellItem.Quantity
+			sellOp.fifoBuyPriceWithDayExchangeRate = buyPriceWithDayExchangeRate
+			sellOp.fifoBuyFeeWithDayExchangeRate = buyFeeWithDayExchangeRate
 
 			buyPriceWithYearExchangeRate += quantityToBeSold * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.YearExchangeRate
 			buyFeeWithYearExchangeRate += quantityToBeSold * itemToSell.buyItem.Fee * itemToSell.buyItem.YearExchangeRate
-			sellOp.fifoBuyPriceWithYearExchangeRate = buyPriceWithYearExchangeRate / sellOp.sellItem.Quantity
-			sellOp.fifoBuyFeeWithYearExchangeRate = buyFeeWithYearExchangeRate / sellOp.sellItem.Quantity
+			sellOp.fifoBuyPriceWithYearExchangeRate = buyPriceWithYearExchangeRate
+			sellOp.fifoBuyFeeWithYearExchangeRate = buyFeeWithYearExchangeRate
 
 			sellOp.soldItems = append(sellOp.soldItems, itemToSell.buyItem)
 			itemToSell.soldByItems = append(itemToSell.soldByItems, sellOp.sellItem)
@@ -174,6 +229,15 @@ func getAvailableItemsToSell(itemsToSell ItemToSellCollection, sellTransaction *
 	return filterItemsToSell(itemsToSell, test)
 }
 
+func getDividendsInYear(dividends ingest.TransactionLogItems, from time.Time, to time.Time) (ret ingest.TransactionLogItems) {
+	fromExclusive := from.Add(-1 * time.Second)
+	toExclusive := to.Add(1 * time.Second)
+	isTransactionTimestampBetween := func(item *ingest.TransactionLogItem) bool {
+		return item.Date.After(fromExclusive) && item.Date.Before(toExclusive)
+	}
+	return filterDividends(dividends, isTransactionTimestampBetween)
+}
+
 func filterSellOperations(list SellOperationCollection, test func(*SellOperation) bool) (ret SellOperationCollection) {
 	for _, item := range list {
 		if test(item) {
@@ -184,6 +248,15 @@ func filterSellOperations(list SellOperationCollection, test func(*SellOperation
 }
 
 func filterItemsToSell(list ItemToSellCollection, test func(*ItemToSell) bool) (ret ItemToSellCollection) {
+	for _, item := range list {
+		if test(item) {
+			ret = append(ret, item)
+		}
+	}
+	return
+}
+
+func filterDividends(list ingest.TransactionLogItems, test func(*ingest.TransactionLogItem) bool) (ret ingest.TransactionLogItems) {
 	for _, item := range list {
 		if test(item) {
 			ret = append(ret, item)
