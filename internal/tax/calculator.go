@@ -41,34 +41,37 @@ type SellOperation struct {
 }
 
 func (item *SellOperation) String() string {
-	return fmt.Sprintf("sellItem:%+v fifoBuyPriceDayExchange:%v fifoBuyFeeDayExchang:%v fifoBuyPriceYearExchange:%v fifoBuyFeeYearExchang:%v currency:%v soldItems:%+v",
+	return fmt.Sprintf("sellItem:%+v dayExchange(fifoBuyPrice:%v fifoBuyFee:%v) yearExchange(fifoBuyPrice:%v fifoBuyFee:%v) currency:%v soldItems:%+v",
 		item.sellItem,
-		item.fifoBuyPriceWithDayExchangeRate, item.fifoBuyFeeWithDayExchangeRate, item.fifoBuyPriceWithYearExchangeRate, item.fifoBuyFeeWithYearExchangeRate,
+		item.fifoBuyPriceWithDayExchangeRate, item.fifoBuyFeeWithDayExchangeRate,
+		item.fifoBuyPriceWithYearExchangeRate, item.fifoBuyFeeWithYearExchangeRate,
 		item.currency, &item.soldItems)
 }
 
 type SellOperationCollection []*SellOperation
 
 type Report struct {
-	sellOperations                      SellOperationCollection
-	revenueWithDayExchangeRate          float64
-	dividendRevenueWithDayExchangeRate  float64
-	expenseWithDayExchangeRate          float64
-	feeWithDayExchangeRate              float64
-	revenueWithYearExchangeRate         float64
-	dividendRevenueWithYearExchangeRate float64
-	expenseWithYearExchangeRate         float64
-	feeWithYearExchangeRate             float64
-	currency                            *util.Currency
-	year                                time.Time
+	SellOperations                      SellOperationCollection
+	RevenueWithDayExchangeRate          float64
+	DividendRevenueWithDayExchangeRate  float64
+	DividendFeeWithDayExchangeRate      float64
+	ExpenseWithDayExchangeRate          float64
+	FeeWithDayExchangeRate              float64
+	RevenueWithYearExchangeRate         float64
+	DividendRevenueWithYearExchangeRate float64
+	DividendFeeWithYearExchangeRate     float64
+	ExpenseWithYearExchangeRate         float64
+	FeeWithYearExchangeRate             float64
+	Currency                            *util.Currency
+	Year                                time.Time
 }
 
 func (item *Report) String() string {
-	return fmt.Sprintf("year: %d sellOpsCount:%d withDayExchangeRate:( expense:%v fee:%v revenue:%v (dividend:%v) ) withYearExchangeRate:( expense:%v fee:%v revenue:%v (dividend:%v) ) currency:%v",
-		item.year.Year(), len(item.sellOperations),
-		item.expenseWithDayExchangeRate, item.feeWithDayExchangeRate, item.revenueWithDayExchangeRate, item.dividendRevenueWithDayExchangeRate,
-		item.expenseWithYearExchangeRate, item.feeWithYearExchangeRate, item.revenueWithYearExchangeRate, item.dividendRevenueWithYearExchangeRate,
-		item.currency)
+	return fmt.Sprintf("year: %d sellOpsCount:%d withDayExchangeRate:( expense:%v fee:%v revenue:%v (dividend:%v fee:%v) ) withYearExchangeRate:( expense:%v fee:%v revenue:%v (dividend:%v fee:%v) ) currency:%v",
+		item.Year.Year(), len(item.SellOperations),
+		item.ExpenseWithDayExchangeRate, item.FeeWithDayExchangeRate, item.RevenueWithDayExchangeRate, item.DividendRevenueWithDayExchangeRate, item.DividendFeeWithDayExchangeRate,
+		item.ExpenseWithYearExchangeRate, item.FeeWithYearExchangeRate, item.RevenueWithYearExchangeRate, item.DividendRevenueWithYearExchangeRate, item.DividendFeeWithYearExchangeRate,
+		item.Currency)
 }
 
 func Calculate(transactions *ingest.TransactionLog, currentTaxYearString string) (reports []*Report, err error) {
@@ -116,24 +119,27 @@ func process(transactions *ingest.TransactionLog, year int) (SellOperationCollec
 
 func calculateReport(sellOps SellOperationCollection, dividends ingest.TransactionLogItems, year time.Time) *Report {
 	report := Report{
-		sellOperations: sellOps,
-		year:           year,
-		currency:       util.CZK,
+		SellOperations: sellOps,
+		Year:           year,
+		Currency:       util.CZK,
 	}
 
 	for _, sellOp := range sellOps {
-		report.expenseWithDayExchangeRate += sellOp.fifoBuyPriceWithDayExchangeRate
-		report.revenueWithDayExchangeRate += sellOp.sellItem.BrokerAmount * sellOp.sellItem.DayExchangeRate
-		report.feeWithDayExchangeRate += sellOp.sellItem.Fee*sellOp.sellItem.DayExchangeRate + sellOp.fifoBuyFeeWithDayExchangeRate
+		report.ExpenseWithDayExchangeRate += sellOp.fifoBuyPriceWithDayExchangeRate
+		report.RevenueWithDayExchangeRate += sellOp.sellItem.BrokerAmount * sellOp.sellItem.DayExchangeRate
+		report.FeeWithDayExchangeRate += sellOp.sellItem.Fee*sellOp.sellItem.DayExchangeRate + sellOp.fifoBuyFeeWithDayExchangeRate
 
-		report.expenseWithYearExchangeRate += sellOp.fifoBuyPriceWithYearExchangeRate
-		report.revenueWithYearExchangeRate += sellOp.sellItem.BrokerAmount * sellOp.sellItem.YearExchangeRate
-		report.feeWithYearExchangeRate += sellOp.sellItem.Fee*sellOp.sellItem.YearExchangeRate + sellOp.fifoBuyFeeWithYearExchangeRate
+		report.ExpenseWithYearExchangeRate += sellOp.fifoBuyPriceWithYearExchangeRate
+		report.RevenueWithYearExchangeRate += sellOp.sellItem.BrokerAmount * sellOp.sellItem.YearExchangeRate
+		report.FeeWithYearExchangeRate += sellOp.sellItem.Fee*sellOp.sellItem.YearExchangeRate + sellOp.fifoBuyFeeWithYearExchangeRate
 	}
 
 	for _, dividend := range dividends {
-		report.dividendRevenueWithDayExchangeRate += dividend.BrokerAmount * dividend.DayExchangeRate
-		report.dividendRevenueWithYearExchangeRate += dividend.BrokerAmount * dividend.YearExchangeRate
+		report.DividendRevenueWithDayExchangeRate += dividend.BrokerAmount * dividend.DayExchangeRate
+		report.DividendFeeWithDayExchangeRate += dividend.Fee * dividend.DayExchangeRate
+
+		report.DividendRevenueWithYearExchangeRate += dividend.BrokerAmount * dividend.YearExchangeRate
+		report.DividendFeeWithYearExchangeRate += dividend.Fee * dividend.YearExchangeRate
 	}
 
 	return &report
@@ -157,14 +163,15 @@ func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCol
 		if newAvailableQuantity >= 0.0 {
 			// sell operation has all buys processed
 			itemToSell.availableQuantity = newAvailableQuantity
+			soldRatio := quantityToBeSold / itemToSell.buyItem.Quantity
 
 			buyPriceWithDayExchangeRate += quantityToBeSold * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.DayExchangeRate
-			buyFeeWithDayExchangeRate += quantityToBeSold * itemToSell.buyItem.Fee * itemToSell.buyItem.DayExchangeRate
+			buyFeeWithDayExchangeRate += soldRatio * itemToSell.buyItem.Fee * itemToSell.buyItem.DayExchangeRate
 			sellOp.fifoBuyPriceWithDayExchangeRate = buyPriceWithDayExchangeRate
 			sellOp.fifoBuyFeeWithDayExchangeRate = buyFeeWithDayExchangeRate
 
 			buyPriceWithYearExchangeRate += quantityToBeSold * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.YearExchangeRate
-			buyFeeWithYearExchangeRate += quantityToBeSold * itemToSell.buyItem.Fee * itemToSell.buyItem.YearExchangeRate
+			buyFeeWithYearExchangeRate += soldRatio * itemToSell.buyItem.Fee * itemToSell.buyItem.YearExchangeRate
 			sellOp.fifoBuyPriceWithYearExchangeRate = buyPriceWithYearExchangeRate
 			sellOp.fifoBuyFeeWithYearExchangeRate = buyFeeWithYearExchangeRate
 
@@ -177,10 +184,10 @@ func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCol
 			itemToSell.availableQuantity = 0.0
 
 			buyPriceWithDayExchangeRate += itemToSell.buyItem.Quantity * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.DayExchangeRate
-			buyFeeWithDayExchangeRate += itemToSell.buyItem.Quantity * itemToSell.buyItem.Fee * itemToSell.buyItem.DayExchangeRate
+			buyFeeWithDayExchangeRate += itemToSell.buyItem.Fee * itemToSell.buyItem.DayExchangeRate
 
 			buyPriceWithYearExchangeRate += itemToSell.buyItem.Quantity * itemToSell.buyItem.ItemPrice * itemToSell.buyItem.YearExchangeRate
-			buyFeeWithYearExchangeRate += itemToSell.buyItem.Quantity * itemToSell.buyItem.Fee * itemToSell.buyItem.YearExchangeRate
+			buyFeeWithYearExchangeRate += itemToSell.buyItem.Fee * itemToSell.buyItem.YearExchangeRate
 		}
 	}
 }

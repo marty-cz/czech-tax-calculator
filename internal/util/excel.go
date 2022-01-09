@@ -5,6 +5,10 @@ import (
 	"strings"
 )
 
+func GetColumnLetter(colIndex int) string {
+	return string('A' + colIndex)
+}
+
 func IsRowEmpty(row []string, nameColIndex int) bool {
 	if nameColIndex >= 0 && nameColIndex < len(row) {
 		return strings.TrimSpace(row[nameColIndex]) == ""
@@ -25,21 +29,6 @@ func ValidateTableHeader(row []string, legend map[string]int) (err error) {
 	}
 
 	return nil
-}
-
-func ConvertCurrency(rawCurencyStr string) (currency string, err error) {
-
-	if strings.Contains(rawCurencyStr, "USD") {
-		return "USD", nil
-	}
-	if strings.Contains(rawCurencyStr, "EUR") {
-		return "EUR", nil
-	}
-	if strings.Contains(rawCurencyStr, "CZK") {
-		return "CZK", nil
-	}
-
-	return "", fmt.Errorf("unrecognized currency '%s'", rawCurencyStr)
 }
 
 func throwErrorIfBadColumnName(row []string, index int, expected string) (err error) {
