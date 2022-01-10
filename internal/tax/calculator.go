@@ -219,32 +219,33 @@ func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCol
 			// 3 years time test
 			timeTested: itemToSell.buyItem.Date.Sub(timeTestDate).Nanoseconds() < 0,
 		}
-		soldRatio := 0.0
+		soldBuyItemRatio := 0.0
 		newAvailableQuantity := itemToSell.availableQuantity - quantityToBeSold
 		if newAvailableQuantity >= 0.0 {
 			// sell operation has all buys processed
 			soldItem.soldQuantity = quantityToBeSold
 			itemToSell.availableQuantity = newAvailableQuantity
-			soldRatio = soldItem.soldQuantity / itemToSell.buyItem.Quantity
+			soldBuyItemRatio = soldItem.soldQuantity / itemToSell.buyItem.Quantity
 		} else {
 			// some buy items are still required to be sold by this sell operation
 			quantityToBeSold -= itemToSell.availableQuantity
 			soldItem.soldQuantity = itemToSell.availableQuantity
 			// noting remains to be sold in the buy item
 			itemToSell.availableQuantity = 0.0
-			soldRatio = soldItem.soldQuantity / itemToSell.buyItem.Quantity
+			soldBuyItemRatio = soldItem.soldQuantity / itemToSell.buyItem.Quantity
 		}
 
 		// calculate purchase for this item
 		soldItem.fifoBuyPrice = newAccountingValue(
-			soldRatio*itemToSell.buyItem.BankAmount*itemToSell.buyItem.DayExchangeRate,
-			soldRatio*itemToSell.buyItem.BankAmount*itemToSell.buyItem.YearExchangeRate,
+			soldBuyItemRatio*itemToSell.buyItem.BankAmount*itemToSell.buyItem.DayExchangeRate,
+			soldBuyItemRatio*itemToSell.buyItem.BankAmount*itemToSell.buyItem.YearExchangeRate,
 			nil)
 		soldItem.fifoBuyFee = newAccountingValue(
-			soldRatio*itemToSell.buyItem.Fee*itemToSell.buyItem.DayExchangeRate,
-			soldRatio*itemToSell.buyItem.Fee*itemToSell.buyItem.YearExchangeRate,
+			soldBuyItemRatio*itemToSell.buyItem.Fee*itemToSell.buyItem.DayExchangeRate,
+			soldBuyItemRatio*itemToSell.buyItem.Fee*itemToSell.buyItem.YearExchangeRate,
 			nil)
 		// calculate revenue for this buy item
+		soldRatio := soldItem.soldQuantity / sellOp.sellItem.Quantity
 		revenue := newAccountingValue(
 			soldRatio*sellOp.sellItem.BrokerAmount*sellOp.sellItem.DayExchangeRate,
 			soldRatio*sellOp.sellItem.BrokerAmount*sellOp.sellItem.YearExchangeRate,
