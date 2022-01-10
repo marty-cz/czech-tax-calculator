@@ -114,7 +114,10 @@ func (x *Report) String() string {
 		x.AdditionalRevenue, x.AdditionalFee)
 }
 
-func Calculate(transactions *ingest.TransactionLog, currentTaxYearString string) (reports []*Report, err error) {
+// map of reports (value) in years (key)
+type Reports []*Report
+
+func Calculate(transactions *ingest.TransactionLog, currentTaxYearString string, allowThreeYearsTimeTest bool) (reports Reports, err error) {
 
 	currentTaxYear, err := util.GetYearFromString(currentTaxYearString)
 	if err != nil {
@@ -130,7 +133,7 @@ func Calculate(transactions *ingest.TransactionLog, currentTaxYearString string)
 		oldestSellTransactionYear = transactions.AdditionalIncomes[0].Date.Year()
 	}
 	for year := oldestSellTransactionYear; year <= currentTaxYear; year++ {
-		inYearSellOperations, dateStart, dateEnd, err := process(transactions, year)
+		inYearSellOperations, dateStart, dateEnd, err := process(transactions, year, allowThreeYearsTimeTest)
 		if err != nil {
 			return nil, fmt.Errorf("calculation for year '%v' failed: %v", year, err)
 		}
@@ -143,7 +146,7 @@ func Calculate(transactions *ingest.TransactionLog, currentTaxYearString string)
 	return
 }
 
-func process(transactions *ingest.TransactionLog, year int) (SellOperationCollection, time.Time, time.Time, error) {
+func process(transactions *ingest.TransactionLog, year int, allowThreeYearsTimeTest bool) (SellOperationCollection, time.Time, time.Time, error) {
 	layout := "02.01.2006 15:04:05"
 	dateStart, _ := time.Parse(layout, fmt.Sprintf("01.01.%d 00:00:00", year))
 	dateEnd, _ := time.Parse(layout, fmt.Sprintf("31.12.%d 23:59:59", year))
@@ -152,11 +155,11 @@ func process(transactions *ingest.TransactionLog, year int) (SellOperationCollec
 	sellOperations := convertToSellOperations(transactions.Sales)
 
 	inYearSellOperations := getSalesInYear(sellOperations, dateStart, dateEnd)
-	log.Debugf("Sale transaction count for year '%s' is '%d'", year, len(inYearSellOperations))
+	log.Debugf("Sale transaction count for year '%d' is '%d'", year, len(inYearSellOperations))
 	for _, sellOp := range inYearSellOperations {
 		availableBuyItems := getAvailableItemsToSell(itemsToSell, sellOp.sellItem)
 		log.Debugf("For '%s' : %v", sellOp.sellItem.Name, availableBuyItems)
-		calculateSellExpense(sellOp, availableBuyItems)
+		calculateSellExpense(sellOp, availableBuyItems, allowThreeYearsTimeTest)
 		log.Debugf("Processed '%+v'", sellOp)
 	}
 	return inYearSellOperations, dateStart, dateEnd, nil
@@ -224,7 +227,7 @@ func calculateReport(sellOps SellOperationCollection, dividends ingest.Transacti
 	return &report
 }
 
-func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCollection) {
+func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCollection, allowThreeYearsTimeTest bool) {
 
 	timeTestDate := util.GetDateThreeYearsBefore(sellOp.sellItem.Date)
 
@@ -237,7 +240,7 @@ func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCol
 		soldItem := &SoldItem{
 			buyItem: itemToSell.buyItem,
 			// 3 years time test
-			timeTested: itemToSell.buyItem.Date.Sub(timeTestDate).Nanoseconds() < 0,
+			timeTested: allowThreeYearsTimeTest && itemToSell.buyItem.Date.Sub(timeTestDate).Nanoseconds() < 0,
 		}
 		soldBuyItemRatio := 0.0
 		newAvailableQuantity := itemToSell.availableQuantity - quantityToBeSold

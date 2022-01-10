@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	BUY_TABLE_LEGEND = map[string]int{
+	STOCK_BUY_TBL_LEGEND = map[string]int{
 		"STOCK":       0,
 		"DATE":        1,
 		"STOCK PRICE": 2,
@@ -21,7 +21,7 @@ var (
 		"BROKER":      7,
 		"CURRENCY":    8,
 	}
-	SELL_TABLE_LEGEND = map[string]int{
+	STOCK_SELL_TBL_LEGEND = map[string]int{
 		"STOCK":       0,
 		"DATE":        1,
 		"STOCK PRICE": 2,
@@ -32,7 +32,7 @@ var (
 		"BROKER":      7,
 		"CURRENCY":    8,
 	}
-	DIVIDEND_TABLE_LEGEND = map[string]int{
+	STOCK_DIVIDEND_TBL_LEGEND = map[string]int{
 		"STOCK":    0,
 		"DATE":     1,
 		"RECEIVED": 2,
@@ -43,34 +43,34 @@ var (
 	}
 )
 
-func newBuyItem(row []string) (_ *TransactionLogItem, err error) {
+func newStockBuyItem(row []string) (_ *TransactionLogItem, err error) {
 	item := TransactionLogItem{
-		Name:      row[BUY_TABLE_LEGEND["STOCK"]],
-		Broker:    row[BUY_TABLE_LEGEND["BROKER"]],
+		Name:      row[STOCK_BUY_TBL_LEGEND["STOCK"]],
+		Broker:    row[STOCK_BUY_TBL_LEGEND["BROKER"]],
 		Operation: BUY,
 	}
 
-	if rawDate, err := strconv.ParseFloat(row[BUY_TABLE_LEGEND["DATE"]], 64); err != nil {
+	if rawDate, err := strconv.ParseFloat(row[STOCK_BUY_TBL_LEGEND["DATE"]], 64); err != nil {
 		return nil, fmt.Errorf("raw date is not a number: %s", err)
 	} else if item.Date, err = excel.ExcelDateToTime(rawDate, false); err != nil {
 		return nil, fmt.Errorf("date has invalid format: %s", err)
 	}
-	if item.ItemPrice, err = strconv.ParseFloat(row[BUY_TABLE_LEGEND["STOCK PRICE"]], 64); err != nil {
+	if item.ItemPrice, err = strconv.ParseFloat(row[STOCK_BUY_TBL_LEGEND["STOCK PRICE"]], 64); err != nil {
 		return nil, fmt.Errorf("stock price is not a number: %s", err)
 	}
-	if item.BankAmount, err = strconv.ParseFloat(row[BUY_TABLE_LEGEND["PAID"]], 64); err != nil {
+	if item.BankAmount, err = strconv.ParseFloat(row[STOCK_BUY_TBL_LEGEND["PAID"]], 64); err != nil {
 		return nil, fmt.Errorf("paid is not a number: %s", err)
 	}
-	if item.BrokerAmount, err = strconv.ParseFloat(row[BUY_TABLE_LEGEND["AMOUNT"]], 64); err != nil {
+	if item.BrokerAmount, err = strconv.ParseFloat(row[STOCK_BUY_TBL_LEGEND["AMOUNT"]], 64); err != nil {
 		return nil, fmt.Errorf("amount is not a number: %s", err)
 	}
-	if item.Fee, err = strconv.ParseFloat(row[BUY_TABLE_LEGEND["FEE"]], 64); err != nil {
+	if item.Fee, err = strconv.ParseFloat(row[STOCK_BUY_TBL_LEGEND["FEE"]], 64); err != nil {
 		return nil, fmt.Errorf("fee is not a number: %s", err)
 	}
-	if item.Quantity, err = strconv.ParseFloat(row[BUY_TABLE_LEGEND["QUANTITY"]], 64); err != nil {
+	if item.Quantity, err = strconv.ParseFloat(row[STOCK_BUY_TBL_LEGEND["QUANTITY"]], 64); err != nil {
 		return nil, fmt.Errorf("quantity is not a number: %s", err)
 	}
-	if item.Currency, err = util.GetCurrencyByName(row[BUY_TABLE_LEGEND["CURRENCY"]]); err != nil {
+	if item.Currency, err = util.GetCurrencyByName(row[STOCK_BUY_TBL_LEGEND["CURRENCY"]]); err != nil {
 		return nil, fmt.Errorf("currency format problem: %s", err)
 	}
 	if item.DayExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
@@ -82,34 +82,34 @@ func newBuyItem(row []string) (_ *TransactionLogItem, err error) {
 	return &item, nil
 }
 
-func newSellItem(row []string) (_ *TransactionLogItem, err error) {
+func newStockSellItem(row []string) (_ *TransactionLogItem, err error) {
 	item := TransactionLogItem{
-		Name:      row[SELL_TABLE_LEGEND["STOCK"]],
-		Broker:    row[SELL_TABLE_LEGEND["BROKER"]],
+		Name:      row[STOCK_SELL_TBL_LEGEND["STOCK"]],
+		Broker:    row[STOCK_SELL_TBL_LEGEND["BROKER"]],
 		Operation: SELL,
 	}
 
-	if rawDate, err := strconv.ParseFloat(row[SELL_TABLE_LEGEND["DATE"]], 64); err != nil {
+	if rawDate, err := strconv.ParseFloat(row[STOCK_SELL_TBL_LEGEND["DATE"]], 64); err != nil {
 		return nil, fmt.Errorf("raw date is not a number: %s", err)
 	} else if item.Date, err = excel.ExcelDateToTime(rawDate, false); err != nil {
 		return nil, fmt.Errorf("date has invalid format: %s", err)
 	}
-	if item.ItemPrice, err = strconv.ParseFloat(row[SELL_TABLE_LEGEND["STOCK PRICE"]], 64); err != nil {
+	if item.ItemPrice, err = strconv.ParseFloat(row[STOCK_SELL_TBL_LEGEND["STOCK PRICE"]], 64); err != nil {
 		return nil, fmt.Errorf("stock price is not a number: %s", err)
 	}
-	if item.BankAmount, err = strconv.ParseFloat(row[SELL_TABLE_LEGEND["RECEIVED"]], 64); err != nil {
+	if item.BankAmount, err = strconv.ParseFloat(row[STOCK_SELL_TBL_LEGEND["RECEIVED"]], 64); err != nil {
 		return nil, fmt.Errorf("received is not a number: %s", err)
 	}
-	if item.BrokerAmount, err = strconv.ParseFloat(row[SELL_TABLE_LEGEND["AMOUNT"]], 64); err != nil {
+	if item.BrokerAmount, err = strconv.ParseFloat(row[STOCK_SELL_TBL_LEGEND["AMOUNT"]], 64); err != nil {
 		return nil, fmt.Errorf("amount is not a number: %s", err)
 	}
-	if item.Fee, err = strconv.ParseFloat(row[SELL_TABLE_LEGEND["FEE"]], 64); err != nil {
+	if item.Fee, err = strconv.ParseFloat(row[STOCK_SELL_TBL_LEGEND["FEE"]], 64); err != nil {
 		return nil, fmt.Errorf("fee is not a number: %s", err)
 	}
-	if item.Quantity, err = strconv.ParseFloat(row[SELL_TABLE_LEGEND["QUANTITY"]], 64); err != nil {
+	if item.Quantity, err = strconv.ParseFloat(row[STOCK_SELL_TBL_LEGEND["QUANTITY"]], 64); err != nil {
 		return nil, fmt.Errorf("quantity is not a number: %s", err)
 	}
-	if item.Currency, err = util.GetCurrencyByName(row[SELL_TABLE_LEGEND["CURRENCY"]]); err != nil {
+	if item.Currency, err = util.GetCurrencyByName(row[STOCK_SELL_TBL_LEGEND["CURRENCY"]]); err != nil {
 		return nil, fmt.Errorf("currency format problem: %s", err)
 	}
 	if item.DayExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
@@ -121,25 +121,25 @@ func newSellItem(row []string) (_ *TransactionLogItem, err error) {
 	return &item, nil
 }
 
-func newDividendItem(row []string) (_ *TransactionLogItem, err error) {
+func newStockDividendItem(row []string) (_ *TransactionLogItem, err error) {
 	item := TransactionLogItem{
-		Name:      row[DIVIDEND_TABLE_LEGEND["STOCK"]],
-		Broker:    row[DIVIDEND_TABLE_LEGEND["BROKER"]],
+		Name:      row[STOCK_DIVIDEND_TBL_LEGEND["STOCK"]],
+		Broker:    row[STOCK_DIVIDEND_TBL_LEGEND["BROKER"]],
 		Operation: DIVIDEND,
 	}
 
-	if rawDate, err := strconv.ParseFloat(row[DIVIDEND_TABLE_LEGEND["DATE"]], 64); err != nil {
+	if rawDate, err := strconv.ParseFloat(row[STOCK_DIVIDEND_TBL_LEGEND["DATE"]], 64); err != nil {
 		return nil, fmt.Errorf("raw date is not a number: %s", err)
 	} else if item.Date, err = excel.ExcelDateToTime(rawDate, false); err != nil {
 		return nil, fmt.Errorf("date has invalid format: %s", err)
 	}
-	if item.BankAmount, err = strconv.ParseFloat(row[DIVIDEND_TABLE_LEGEND["RECEIVED"]], 64); err != nil {
+	if item.BankAmount, err = strconv.ParseFloat(row[STOCK_DIVIDEND_TBL_LEGEND["RECEIVED"]], 64); err != nil {
 		return nil, fmt.Errorf("received is not a number: %s", err)
 	}
-	if item.BrokerAmount, err = strconv.ParseFloat(row[DIVIDEND_TABLE_LEGEND["AMOUNT"]], 64); err != nil {
+	if item.BrokerAmount, err = strconv.ParseFloat(row[STOCK_DIVIDEND_TBL_LEGEND["AMOUNT"]], 64); err != nil {
 		return nil, fmt.Errorf("amount is not a number: %s", err)
 	}
-	if item.Currency, err = util.GetCurrencyByName(row[DIVIDEND_TABLE_LEGEND["CURRENCY"]]); err != nil {
+	if item.Currency, err = util.GetCurrencyByName(row[STOCK_DIVIDEND_TBL_LEGEND["CURRENCY"]]); err != nil {
 		return nil, fmt.Errorf("currency format problem: %s", err)
 	}
 	if item.DayExchangeRate, err = util.GetCzkExchangeRateInDay(item.Date, *item.Currency); err != nil {
@@ -170,23 +170,23 @@ func ProcessStocks(filePath string) (_ *TransactionLog, err error) {
 	transactions := TransactionLog{}
 
 	log.Infof("Stocks: Ingesting Purchases")
-	if transactions.Purchases, err = processSheet(f, "BUY", BUY_TABLE_LEGEND, newBuyItem); err != nil {
+	if transactions.Purchases, err = processSheet(f, "BUY", STOCK_BUY_TBL_LEGEND, newStockBuyItem); err != nil {
 		log.Error(err)
 	}
 	log.Infof("Stocks: Ingesting Sales")
-	if transactions.Sales, err = processSheet(f, "SELL", SELL_TABLE_LEGEND, newSellItem); err != nil {
+	if transactions.Sales, err = processSheet(f, "SELL", STOCK_SELL_TBL_LEGEND, newStockSellItem); err != nil {
 		log.Error(err)
 	}
 	log.Infof("Stocks: Ingesting Dividends")
-	if transactions.Dividends, err = processSheet(f, "DIVIDEND", DIVIDEND_TABLE_LEGEND, newDividendItem); err != nil {
+	if transactions.Dividends, err = processSheet(f, "DIVIDEND", STOCK_DIVIDEND_TBL_LEGEND, newStockDividendItem); err != nil {
 		log.Error(err)
 	}
 	log.Infof("Stocks: Ingesting Additional Income")
-	if transactions.AdditionalIncomes, err = processSheet(f, "ADDITIONAL INCOME", ADDITIONAL_INCOME_TABLE_LEGEND, newAdditionalIncomeItem); err != nil {
+	if transactions.AdditionalIncomes, err = processSheet(f, "ADDITIONAL INCOME", ADDITIONAL_INCOME_TBL_LEGEND, newAdditionalIncomeItem); err != nil {
 		log.Error(err)
 	}
 	log.Infof("Stocks: Ingesting Additional Fee")
-	if transactions.AdditionalFees, err = processSheet(f, "ADDITIONAL FEE", ADDITIONAL_FEE_TABLE_LEGEND, newAdditionalFeeItem); err != nil {
+	if transactions.AdditionalFees, err = processSheet(f, "ADDITIONAL FEE", ADDITIONAL_FEE_TBL_LEGEND, newAdditionalFeeItem); err != nil {
 		log.Error(err)
 	}
 

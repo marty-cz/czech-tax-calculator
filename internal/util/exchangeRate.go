@@ -114,7 +114,7 @@ func GetCzkExchangeRateInYear(date time.Time, currency Currency) (float64, error
 		}
 	}
 
-	if rate <= 0.0 {
+	if rate < 0.0 {
 		return rate, fmt.Errorf("exchange rate for currency '%v' not found", currency)
 	}
 	return rate, nil
@@ -192,7 +192,7 @@ func isPublicHolidayInCzechia(date time.Time) bool {
 	buf.ReadFrom(resp.Body)
 	body := buf.String()
 
-	return strings.Contains(body, "<dt>isPublicHoliday</dt><dd>1</dd>")
+	return strings.Contains(body, "isPublicHoliday: 1")
 }
 
 // Maďarsko|forint|100|HUF|8,79|8,72|8,74|8,89|8,81|8,67|8,50|8,03|7,88|7,49|7,15
