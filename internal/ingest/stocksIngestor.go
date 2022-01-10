@@ -225,12 +225,15 @@ func ProcessStocks(filePath string) (_ *TransactionLog, err error) {
 
 	transactions := TransactionLog{}
 
+	log.Debugf("Stocks: Ingesting Purchases")
 	if transactions.Purchases, err = processSheet(f, "BUY", BUY_TABLE_LEGEND, newBuyItem); err != nil {
 		log.Error(err)
 	}
+	log.Debugf("Stocks: Ingesting Sales")
 	if transactions.Sales, err = processSheet(f, "SELL", SELL_TABLE_LEGEND, newSellItem); err != nil {
 		log.Error(err)
 	}
+	log.Debugf("Stocks: Ingesting Dividends")
 	if transactions.Dividends, err = processSheet(f, "DIVIDEND", DIVIDEND_TABLE_LEGEND, newDividendItem); err != nil {
 		log.Error(err)
 	}

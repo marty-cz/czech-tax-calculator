@@ -18,7 +18,7 @@ func IsRowEmpty(row []string, nameColIndex int) bool {
 
 func ValidateTableHeader(row []string, legend map[string]int) (err error) {
 
-	if len(row) != len(legend) {
+	if len(row) < len(legend) {
 		return fmt.Errorf("unexpected count of columns '%d', but should be '%d'", len(row), len(legend))
 	}
 

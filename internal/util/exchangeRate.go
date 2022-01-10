@@ -142,7 +142,7 @@ func GetCzkExchangeRateInDay(date time.Time, currency Currency) (float64, error)
 			if !strings.Contains(txt, dateString) {
 				dateToCheck := date
 				for !isBussinessDayInCzechia(dateToCheck) {
-					dateToCheck := dateToCheck.Add(-24 * time.Hour)
+					dateToCheck = dateToCheck.Add(-24 * time.Hour)
 					dateBeforeString = dateToCheck.Format(DATE_DORMAT_FOR_CNB_DAY)
 				}
 				if !strings.Contains(txt, dateBeforeString) {

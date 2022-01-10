@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"strconv"
+	"time"
 )
 
 func GetYearFromString(yearString string) (int, error) {
@@ -11,4 +12,8 @@ func GetYearFromString(yearString string) (int, error) {
 		return -1, fmt.Errorf("invalid year '%v'", yearString)
 	}
 	return year, nil
+}
+
+func GetDateThreeYearsBefore(date time.Time) time.Time {
+	return time.Date(date.Year()-3, date.Month(), date.Day(), date.Hour(), date.Minute(), date.Second(), date.Nanosecond(), date.Location())
 }

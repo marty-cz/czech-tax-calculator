@@ -32,15 +32,22 @@ func main() {
 		if err != nil {
 			log.Errorf("Cannot ingest stock input file '%s' due to: %s", *stockInputPath, err)
 		} else {
+			log.Infof("Stocks: Ingested")
+
 			taxReports, err := tax.Calculate(transactions, "2021")
 			if err != nil {
-				log.Errorf("Cannot create tax report due to: %s", *stockInputPath, err)
+				log.Errorf("Cannot create stock tax report due to: %s", *stockInputPath, err)
 			} else {
-				log.Infof("%+v", taxReports)
-				for _, report := range taxReports {
-					export.ExportToExcel(report, fmt.Sprintf("./tax-statement-%d.xlsx", report.Year.Year()))
-				}
+				log.Infof("Stocks tax: Calculated")
+				log.Debugf("%+v", taxReports)
 
+				for _, report := range taxReports {
+					if err := export.ExportToExcel(report, fmt.Sprintf("./tax-statement-%d.xlsx", report.Year.Year())); err != nil {
+						log.Errorf("Cannot create excel statement for year '%d'", report.Year.Year())
+					} else {
+						log.Infof("Stocks report: Created for '%d'", report.Year.Year())
+					}
+				}
 			}
 		}
 	}
