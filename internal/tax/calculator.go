@@ -204,10 +204,6 @@ func calculateReport(sellOps SellOperationCollection, dividends ingest.Transacti
 	return &report
 }
 
-// TODO: Should be the calculation of fifo buy price (like fee) rather based on
-// percentage of sold buy item quantity? Because we have available data for
-// itemToSell.buyItem.BrokerAmount and itemToSell.buyItem.BankAmount
-// TODO2: Should be the prices/fees calculated for local currency (CZK) instead?
 func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCollection) {
 
 	timeTestDate := util.GetDateThreeYearsBefore(sellOp.sellItem.Date)
@@ -241,8 +237,8 @@ func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCol
 
 		// calculate purchase for this item
 		soldItem.fifoBuyPrice = newAccountingValue(
-			soldItem.soldQuantity*itemToSell.buyItem.ItemPrice*itemToSell.buyItem.DayExchangeRate,
-			soldItem.soldQuantity*itemToSell.buyItem.ItemPrice*itemToSell.buyItem.YearExchangeRate,
+			soldRatio*itemToSell.buyItem.BankAmount*itemToSell.buyItem.DayExchangeRate,
+			soldRatio*itemToSell.buyItem.BankAmount*itemToSell.buyItem.YearExchangeRate,
 			nil)
 		soldItem.fifoBuyFee = newAccountingValue(
 			soldRatio*itemToSell.buyItem.Fee*itemToSell.buyItem.DayExchangeRate,
@@ -250,8 +246,8 @@ func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCol
 			nil)
 		// calculate revenue for this buy item
 		revenue := newAccountingValue(
-			soldItem.soldQuantity*sellOp.sellItem.ItemPrice*sellOp.sellItem.DayExchangeRate,
-			soldItem.soldQuantity*sellOp.sellItem.ItemPrice*sellOp.sellItem.YearExchangeRate,
+			soldRatio*sellOp.sellItem.BrokerAmount*sellOp.sellItem.DayExchangeRate,
+			soldRatio*sellOp.sellItem.BrokerAmount*sellOp.sellItem.YearExchangeRate,
 			nil)
 		if soldItem.timeTested {
 			sellOp.timeTestedRevenue.Add(revenue)
