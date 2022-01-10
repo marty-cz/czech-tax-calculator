@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "${workspaceFolder}/cmd/czech-tax-calculator",
-            "args": ["--stock-input", "/home/martin/Downloads/Ucetni-kniha-Akcie.xlsx", "--crypto-input", "/home/martin/Downloads/Ucetni-kniha-Crypto.xlsx"],
+            "args": ["--stock-input", "${workspaceFolder}/examples/Ucetni-kniha-Akcie.xlsx", "--crypto-input", "${workspaceFolder}/examples/Ucetni-kniha-Crypto.xlsx"],
         }
     ]
 }

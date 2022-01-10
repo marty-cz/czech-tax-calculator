@@ -12,4 +12,4 @@ build: tidy
 #	CGO_ENABLED=0 GOARCH=amd64 GOOS=window go build -o out/bin/${BINARY_NAME}-windows cmd/${BINARY_NAME}/main.go
 
 buildAndRun: build
-	./out/bin/${BINARY_NAME}-linux --stock-input ~/Downloads/Ucetni-kniha-Akcie.xlsx --crypto-input ~/Downloads/Ucetni-kniha-Crypto.xlsx
+	./out/bin/${BINARY_NAME}-linux --stock-input ./examples/Ucetni-kniha-Akcie.xlsx --crypto-input ./examples/Ucetni-kniha-Crypto.xlsx

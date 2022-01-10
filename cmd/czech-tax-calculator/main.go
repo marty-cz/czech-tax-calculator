@@ -27,6 +27,7 @@ func init() {
 func main() {
 	stockInputPath := flag.String("stock-input", "", "File path to input file with Stocks transaction records")
 	cryptoInputPath := flag.String("crypto-input", "", "File path to input file with Crypto-currencies transaction records")
+	targetYear := flag.String("year", fmt.Sprint(time.Now().Year()-1), "Target year for taxes")
 	flag.Parse()
 
 	// pre-check of Year change rate to CZK availability
@@ -44,7 +45,7 @@ func main() {
 		} else {
 			log.Infof("Stocks: Ingested")
 
-			stockTaxReports, err = tax.Calculate(stockTransactions, "2021", true)
+			stockTaxReports, err = tax.Calculate(stockTransactions, *targetYear, true)
 			if err != nil {
 				log.Errorf("Cannot create stock tax report due to: %s", *stockInputPath, err)
 			} else {
@@ -61,7 +62,7 @@ func main() {
 		} else {
 			log.Infof("Cryptos: Ingested")
 
-			cryptoTaxReports, err = tax.Calculate(cryptoTransactions, "2021", false)
+			cryptoTaxReports, err = tax.Calculate(cryptoTransactions, *targetYear, false)
 			if err != nil {
 				log.Errorf("Cannot create crypto tax report due to: %s", *cryptoInputPath, err)
 			} else {
