@@ -4,12 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/marty-cz/czech-tax-calculator/internal/export"
 	"github.com/marty-cz/czech-tax-calculator/internal/ingest"
 	"github.com/marty-cz/czech-tax-calculator/internal/tax"
+	"github.com/marty-cz/czech-tax-calculator/internal/util"
 )
 
 func init() {
@@ -26,6 +28,13 @@ func main() {
 	stockInputPath := flag.String("stock-input", "", "File path to input file with Stocks transaction records")
 	cryptoInputPath := flag.String("crypto-input", "", "File path to input file with Crypto-currencies transaction records")
 	flag.Parse()
+
+	// pre-check of Year change rate to CZK availability
+	for year := 2011; year <= time.Now().Year(); year++ {
+		if val, err := util.GetCzkExchangeRateInYear(time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC), *util.USD); err != nil || val <= 0.0 {
+			log.Warnf("missing or invalid an Year exchange rate for year '%d' - result for that year will not be accurate. Please fill it in exchangeRate.go", year)
+		}
+	}
 
 	if *stockInputPath != "" {
 		transactions, err := ingest.ProcessStocks(*stockInputPath)

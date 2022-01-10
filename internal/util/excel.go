@@ -6,7 +6,7 @@ import (
 )
 
 func GetColumnLetter(colIndex int) string {
-	return string('A' + colIndex)
+	return string(rune('A' + colIndex))
 }
 
 func IsRowEmpty(row []string, nameColIndex int) bool {

@@ -102,13 +102,16 @@ type Report struct {
 	TotalStockExpense      *AccountingValue
 	TimeTestedStockFee     *AccountingValue
 	TotalStockFee          *AccountingValue
+	AdditionalRevenue      *AccountingValue
+	AdditionalFee          *AccountingValue
 	Year                   time.Time
 	Currency               *util.Currency
 }
 
 func (x *Report) String() string {
-	return fmt.Sprintf("year: %d sellOpsCount:%d stock:(total:(revenue:(%v) expense:(%v) fee:(%v)) timeTested:(revenue:(%v) expense:(%v) fee:(%v))) dividend:(revenue:(%v) fee:(%v))",
-		x.Year.Year(), len(x.SellOperations), x.TotalStockRevenue, x.TotalStockExpense, x.TotalStockFee, x.TimeTestedStockRevenue, x.TimeTestedStockExpense, x.TimeTestedStockFee, x.DividendRevenue, x.DividendFee)
+	return fmt.Sprintf("year: %d sellOpsCount:%d stock:(total:(revenue:(%v) expense:(%v) fee:(%v)) timeTested:(revenue:(%v) expense:(%v) fee:(%v))) dividend:(revenue:(%v) fee:(%v) additional:(revenue:(%v) fee:(%v))",
+		x.Year.Year(), len(x.SellOperations), x.TotalStockRevenue, x.TotalStockExpense, x.TotalStockFee, x.TimeTestedStockRevenue, x.TimeTestedStockExpense, x.TimeTestedStockFee, x.DividendRevenue, x.DividendFee,
+		x.AdditionalRevenue, x.AdditionalFee)
 }
 
 func Calculate(transactions *ingest.TransactionLog, currentTaxYearString string) (reports []*Report, err error) {
@@ -123,13 +126,18 @@ func Calculate(transactions *ingest.TransactionLog, currentTaxYearString string)
 	if len(transactions.Sales) > 0 {
 		oldestSellTransactionYear = transactions.Sales[0].Date.Year()
 	}
+	if len(transactions.AdditionalIncomes) > 0 && transactions.AdditionalIncomes[0].Date.Year() < oldestSellTransactionYear {
+		oldestSellTransactionYear = transactions.AdditionalIncomes[0].Date.Year()
+	}
 	for year := oldestSellTransactionYear; year <= currentTaxYear; year++ {
 		inYearSellOperations, dateStart, dateEnd, err := process(transactions, year)
 		if err != nil {
 			return nil, fmt.Errorf("calculation for year '%v' failed: %v", year, err)
 		}
-		inYearDividends := getDividendsInYear(transactions.Dividends, dateStart, dateEnd)
-		reports = append(reports, calculateReport(inYearSellOperations, inYearDividends, dateStart))
+		inYearDividends := getTransactionsInYear(transactions.Dividends, dateStart, dateEnd)
+		inYearAdditionalIncomes := getTransactionsInYear(transactions.AdditionalIncomes, dateStart, dateEnd)
+		inYearAdditionalFees := getTransactionsInYear(transactions.AdditionalFees, dateStart, dateEnd)
+		reports = append(reports, calculateReport(inYearSellOperations, inYearDividends, inYearAdditionalIncomes, inYearAdditionalFees, dateStart))
 	}
 
 	return
@@ -154,7 +162,7 @@ func process(transactions *ingest.TransactionLog, year int) (SellOperationCollec
 	return inYearSellOperations, dateStart, dateEnd, nil
 }
 
-func calculateReport(sellOps SellOperationCollection, dividends ingest.TransactionLogItems, year time.Time) *Report {
+func calculateReport(sellOps SellOperationCollection, dividends ingest.TransactionLogItems, additionalIncomes ingest.TransactionLogItems, additionalFees ingest.TransactionLogItems, year time.Time) *Report {
 	report := Report{
 		SellOperations:         sellOps,
 		Year:                   year,
@@ -167,6 +175,8 @@ func calculateReport(sellOps SellOperationCollection, dividends ingest.Transacti
 		TimeTestedStockExpense: newAccountingValue(0, 0, util.CZK),
 		TotalStockFee:          newAccountingValue(0, 0, util.CZK),
 		TimeTestedStockFee:     newAccountingValue(0, 0, util.CZK),
+		AdditionalRevenue:      newAccountingValue(0, 0, util.CZK),
+		AdditionalFee:          newAccountingValue(0, 0, util.CZK),
 	}
 
 	for _, sellOp := range sellOps {
@@ -199,6 +209,16 @@ func calculateReport(sellOps SellOperationCollection, dividends ingest.Transacti
 		report.DividendFee.Add(newAccountingValue(
 			dividend.Fee*dividend.DayExchangeRate,
 			dividend.Fee*dividend.YearExchangeRate, report.Currency))
+	}
+	for _, additionalIncome := range additionalIncomes {
+		report.AdditionalRevenue.Add(newAccountingValue(
+			additionalIncome.BrokerAmount*additionalIncome.DayExchangeRate,
+			additionalIncome.BrokerAmount*additionalIncome.YearExchangeRate, report.Currency))
+	}
+	for _, additionalFee := range additionalFees {
+		report.AdditionalRevenue.Add(newAccountingValue(
+			additionalFee.BrokerAmount*additionalFee.DayExchangeRate,
+			additionalFee.BrokerAmount*additionalFee.YearExchangeRate, report.Currency))
 	}
 
 	return &report
@@ -291,6 +311,8 @@ func sortByDate(input *ingest.TransactionLog) {
 	sort.Sort(ByDate(input.Sales))
 	sort.Sort(ByDate(input.Purchases))
 	sort.Sort(ByDate(input.Dividends))
+	sort.Sort(ByDate(input.AdditionalIncomes))
+	sort.Sort(ByDate(input.AdditionalFees))
 }
 
 func getSalesInYear(sellOperations SellOperationCollection, from time.Time, to time.Time) (ret SellOperationCollection) {
@@ -309,13 +331,13 @@ func getAvailableItemsToSell(itemsToSell ItemToSellCollection, sellTransaction *
 	return filterItemsToSell(itemsToSell, test)
 }
 
-func getDividendsInYear(dividends ingest.TransactionLogItems, from time.Time, to time.Time) (ret ingest.TransactionLogItems) {
+func getTransactionsInYear(transactions ingest.TransactionLogItems, from time.Time, to time.Time) (ret ingest.TransactionLogItems) {
 	fromExclusive := from.Add(-1 * time.Second)
 	toExclusive := to.Add(1 * time.Second)
 	isTransactionTimestampBetween := func(item *ingest.TransactionLogItem) bool {
 		return item.Date.After(fromExclusive) && item.Date.Before(toExclusive)
 	}
-	return filterDividends(dividends, isTransactionTimestampBetween)
+	return filterTransactionLog(transactions, isTransactionTimestampBetween)
 }
 
 func filterSellOperations(list SellOperationCollection, test func(*SellOperation) bool) (ret SellOperationCollection) {
@@ -336,7 +358,7 @@ func filterItemsToSell(list ItemToSellCollection, test func(*ItemToSell) bool) (
 	return
 }
 
-func filterDividends(list ingest.TransactionLogItems, test func(*ingest.TransactionLogItem) bool) (ret ingest.TransactionLogItems) {
+func filterTransactionLog(list ingest.TransactionLogItems, test func(*ingest.TransactionLogItem) bool) (ret ingest.TransactionLogItems) {
 	for _, item := range list {
 		if test(item) {
 			ret = append(ret, item)

@@ -100,6 +100,23 @@ func (w work) writeOverviewStatement(report *tax.Report) error {
 	coordsDPD := w.writeAccountingEqCell(sheet, row, col+1, fmt.Sprintf("%s-%s", coordsDRD, coordsDFD), *report.Currency)
 	coordsDPY := w.writeAccountingEqCell(sheet, row, col+2, fmt.Sprintf("%s-%s", coordsDRY, coordsDFY), *report.Currency)
 
+	row += 2
+	w.writeCell(sheet, row, col, "Additional")
+	w.writeCell(sheet, row, col+1, "with DAY exchange rate")
+	w.writeCell(sheet, row, col+2, "with YEAR exchange rate")
+	row++
+	w.writeCell(sheet, row, col, "Revenue")
+	coordsARD := w.writeAccountingCell(sheet, row, col+1, report.AdditionalRevenue.ValueWithDayExchangeRate, *report.AdditionalRevenue.Currency)
+	coordsARY := w.writeAccountingCell(sheet, row, col+2, report.AdditionalRevenue.ValueWithYearExchangeRate, *report.AdditionalRevenue.Currency)
+	row++
+	w.writeCell(sheet, row, col, "Fees")
+	coordsAFD := w.writeAccountingCell(sheet, row, col+1, report.AdditionalFee.ValueWithYearExchangeRate, *report.AdditionalFee.Currency)
+	coordsAFY := w.writeAccountingCell(sheet, row, col+2, report.AdditionalFee.ValueWithYearExchangeRate, *report.AdditionalFee.Currency)
+	row++
+	w.writeCell(sheet, row, col, "Profit")
+	coordsAPD := w.writeAccountingEqCell(sheet, row, col+1, fmt.Sprintf("%s-%s", coordsARD, coordsAFD), *report.Currency)
+	coordsAPY := w.writeAccountingEqCell(sheet, row, col+2, fmt.Sprintf("%s-%s", coordsARY, coordsAFY), *report.Currency)
+
 	row, col = 0, 0
 	w.writeCell(sheet, row, col, "Year")
 	w.writeCell(sheet, row, col+1, report.Year.Year())
@@ -108,14 +125,14 @@ func (w work) writeOverviewStatement(report *tax.Report) error {
 	w.writeCell(sheet, row, col+2, "with YEAR exchange rate")
 	row++
 	w.writeCell(sheet, row, col, "Total Revenue")
-	// Stock revenue - Time Tested stock revenue + Dividend revenue
-	w.writeAccountingEqCell(sheet, row, col+1, fmt.Sprintf("(%s-%s)+%s", coordsSRD, coordsTSRD, coordsDRD), *report.Currency)
-	w.writeAccountingEqCell(sheet, row, col+2, fmt.Sprintf("(%s-%s)+%s", coordsSRY, coordsTSRY, coordsDRY), *report.Currency)
+	// Stock revenue - Time Tested stock revenue + Dividend revenue + Additional revenue
+	w.writeAccountingEqCell(sheet, row, col+1, fmt.Sprintf("(%s-%s)+%s+%s", coordsSRD, coordsTSRD, coordsDRD, coordsARD), *report.Currency)
+	w.writeAccountingEqCell(sheet, row, col+2, fmt.Sprintf("(%s-%s)+%s+%s", coordsSRY, coordsTSRY, coordsDRY, coordsARY), *report.Currency)
 	row++
 	w.writeCell(sheet, row, col, "Total Profit")
-	// Stock profit - Time Tested stock profit + Dividend Profit
-	w.writeAccountingEqCell(sheet, row, col+1, fmt.Sprintf("(%s-%s)+%s", coordsSPD, coordsTSPD, coordsDPD), *report.Currency)
-	w.writeAccountingEqCell(sheet, row, col+2, fmt.Sprintf("(%s-%s)+%s", coordsSPY, coordsTSPY, coordsDPY), *report.Currency)
+	// Stock profit - Time Tested stock profit + Dividend Profit + Additional profit
+	w.writeAccountingEqCell(sheet, row, col+1, fmt.Sprintf("(%s-%s)+%s+%s", coordsSPD, coordsTSPD, coordsDPD, coordsAPD), *report.Currency)
+	w.writeAccountingEqCell(sheet, row, col+2, fmt.Sprintf("(%s-%s)+%s+%s", coordsSPY, coordsTSPY, coordsDPY, coordsAPY), *report.Currency)
 
 	return nil
 }
