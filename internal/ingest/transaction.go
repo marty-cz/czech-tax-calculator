@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/marty-cz/czech-tax-calculator/internal/util"
-	log "github.com/sirupsen/logrus"
-	excel "github.com/xuri/excelize/v2"
 )
 
 type TransactionLog struct {
@@ -67,34 +65,3 @@ func (items *TransactionLogItems) String() string {
 }
 
 type newTransactionItem func([]string) (*TransactionLogItem, error)
-
-func processSheet(excelFile *excel.File, sheetName string, legend map[string]int, newItemFunction newTransactionItem) (transactions TransactionLogItems, err error) {
-	rows, err := excelFile.GetRows(sheetName, excel.Options{RawCellValue: true})
-	if err != nil {
-		return nil, fmt.Errorf("sheet '%s': %s", sheetName, err)
-	}
-
-	transactions = make(TransactionLogItems, 0)
-	for rowNo, row := range rows {
-		if rowNo == 0 {
-			if err := util.ValidateTableHeader(row, legend); err != nil {
-				return nil, fmt.Errorf("sheet '%s' at row '%d': %s", sheetName, rowNo, err)
-			}
-			continue
-		} else if util.IsRowEmpty(row, 0) {
-			log.Debugf("Sheet '%s' at row '%d' - recognized as empty, skipping", sheetName, rowNo)
-			continue
-		}
-
-		item, err := newItemFunction(row)
-		if err != nil {
-			return nil, fmt.Errorf("sheet '%s' at row '%d': %s", sheetName, rowNo, err)
-		}
-
-		transactions = append(transactions, item)
-	}
-	if len(transactions) == 0 {
-		log.Warnf("Sheet '%s' has not data to process", sheetName)
-	}
-	return transactions, nil
-}

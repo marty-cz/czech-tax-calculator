@@ -183,7 +183,7 @@ func isPublicHolidayInCzechia(date time.Time) bool {
 	dateString := date.Format(DATE_DORMAT_FOR_PUBLIC_HOLIDAY)
 	resp, err := http.Get(CZECH_PUBLIC_HOLIDAY_URL + dateString)
 	if err != nil {
-		log.Warnf("Cannot retrieve public holiday for Czechia on %v. Will be treat as general day. %s", date, err)
+		log.Warnf("cannot retrieve public holiday for Czechia on %v. Will be treat as general day. %s", date, err)
 		return false
 	}
 	defer resp.Body.Close()

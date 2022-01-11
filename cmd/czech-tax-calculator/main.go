@@ -37,43 +37,43 @@ func main() {
 		}
 	}
 
-	var stockTaxReports tax.Reports
-	if *stockInputPath != "" {
-		stockTransactions, err := ingest.ProcessStocks(*stockInputPath)
-		if err != nil {
-			log.Errorf("Cannot ingest stock input file '%s' due to: %s", *stockInputPath, err)
-		} else {
-			log.Infof("Stocks: Ingested")
+	// process input files
+	stockTaxReports := createTaxReport(*stockInputPath, *targetYear, ingest.StockItemType, ingest.ProcessStocks)
+	cryptoTaxReports := createTaxReport(*cryptoInputPath, *targetYear, ingest.CryptoItemType, ingest.ProcessCryptos)
 
-			stockTaxReports, err = tax.Calculate(stockTransactions, *targetYear, true)
-			if err != nil {
-				log.Errorf("Cannot create stock tax report due to: %s", *stockInputPath, err)
-			} else {
-				log.Infof("Stocks tax: Calculated")
-			}
+	// write to output file
+	statements := createStatementMap(stockTaxReports, cryptoTaxReports)
+	for _, statement := range statements {
+		if err := export.ExportToExcel(statement, fmt.Sprintf("./tax-statement-%d.xlsx", statement.Year)); err != nil {
+			log.Errorf("cannot create excel statement for year '%d'", statement.Year)
+		} else {
+			log.Infof("report: Created for '%d'", statement.Year)
 		}
 	}
 
-	var cryptoTaxReports tax.Reports
-	if *cryptoInputPath != "" {
-		cryptoTransactions, err := ingest.ProcessCryptos(*cryptoInputPath)
+}
+
+func createTaxReport(sourceFilePath string, targetYear string, itemTypeString string, ingestFn func(string) (*ingest.TransactionLog, error)) (taxReports tax.Reports) {
+	if sourceFilePath != "" {
+		transactions, err := ingestFn(sourceFilePath)
 		if err != nil {
-			log.Errorf("Cannot ingest crypto input file '%s' due to: %s", *cryptoInputPath, err)
+			log.Errorf("%ss: cannot ingest input file '%s' due to: %s", itemTypeString, sourceFilePath, err)
 		} else {
-			log.Infof("Cryptos: Ingested")
+			log.Infof("%ss: all ingested", itemTypeString)
 
-			cryptoTaxReports, err = tax.Calculate(cryptoTransactions, *targetYear, false)
+			taxReports, err = tax.Calculate(transactions, targetYear, true)
 			if err != nil {
-				log.Errorf("Cannot create crypto tax report due to: %s", *cryptoInputPath, err)
+				log.Errorf("%ss: cannot create tax report due to: %s", itemTypeString, sourceFilePath, err)
 			} else {
-				log.Infof("Cryptos tax: Calculated")
-				log.Debugf("%+v", cryptoTaxReports)
-
+				log.Infof("%ss tax: Calculated (reports count: %d)", itemTypeString, len(taxReports))
 			}
 		}
 	}
+	return
+}
 
-	statements := make(map[int]*export.Statement)
+func createStatementMap(stockTaxReports, cryptoTaxReports tax.Reports) (statements map[int]*export.Statement) {
+	statements = make(map[int]*export.Statement)
 	for _, stockReport := range stockTaxReports {
 		year := stockReport.Year.Year()
 		if statements[year] == nil {
@@ -100,13 +100,5 @@ func main() {
 			statements[year].Year = year
 		}
 	}
-
-	for _, statement := range statements {
-		if err := export.ExportToExcel(statement, fmt.Sprintf("./tax-statement-%d.xlsx", statement.Year)); err != nil {
-			log.Errorf("Cannot create excel statement for year '%d'", statement.Year)
-		} else {
-			log.Infof("Report: Created for '%d'", statement.Year)
-		}
-	}
-
+	return
 }
