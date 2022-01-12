@@ -63,7 +63,7 @@ func createTaxReport(sourceFilePath string, targetYear string, itemTypeString st
 
 			taxReports, err = tax.Calculate(transactions, targetYear, true)
 			if err != nil {
-				log.Errorf("%ss: cannot create tax report due to: %s", itemTypeString, sourceFilePath, err)
+				log.Errorf("%ss: cannot create tax report due to: %s", itemTypeString, err)
 			} else {
 				log.Infof("%ss tax: Calculated (reports count: %d)", itemTypeString, len(taxReports))
 			}

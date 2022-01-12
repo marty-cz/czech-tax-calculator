@@ -2,7 +2,6 @@ package tax
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/marty-cz/czech-tax-calculator/internal/ingest"
@@ -28,9 +27,11 @@ func Calculate(transactions *ingest.TransactionLog, currentTaxYearString string,
 		oldestSellTransactionYear = transactions.AdditionalIncomes[0].Date.Year()
 	}
 
+	itemsToSell := convertToItemsToSell(transactions.Purchases)
+
 	// go through tax years from oldest to latest
 	for year := oldestSellTransactionYear; year <= currentTaxYear; year++ {
-		inYearSellOperations, dateStart, dateEnd, err := getItemSales(transactions, year, allowThreeYearsTimeTest)
+		inYearSellOperations, dateStart, dateEnd, err := getItemSales(transactions.Sales, itemsToSell, year, allowThreeYearsTimeTest)
 		if err != nil {
 			return nil, fmt.Errorf("calculation for year '%v' failed: %v", year, err)
 		}
@@ -43,15 +44,14 @@ func Calculate(transactions *ingest.TransactionLog, currentTaxYearString string,
 	return
 }
 
-func getItemSales(transactions *ingest.TransactionLog, year int, allowThreeYearsTimeTest bool) (SellOperations, time.Time, time.Time, error) {
+func getItemSales(sellTransactions ingest.TransactionLogItems, itemsToSell ItemsToSell, year int, allowThreeYearsTimeTest bool) (SellOperations, time.Time, time.Time, error) {
 	layout := "02.01.2006 15:04:05"
 	dateStart, _ := time.Parse(layout, fmt.Sprintf("01.01.%d 00:00:00", year))
 	dateEnd, _ := time.Parse(layout, fmt.Sprintf("31.12.%d 23:59:59", year))
 
-	itemsToSell := convertToItemsToSell(transactions.Purchases)
-	sellOperations := convertToSellOperations(transactions.Sales)
+	inYearSellTransactions := getTransactionsInYear(sellTransactions, dateStart, dateEnd)
+	inYearSellOperations := convertToSellOperations(inYearSellTransactions)
 
-	inYearSellOperations := getSalesInYear(sellOperations, dateStart, dateEnd)
 	log.Infof("sale transactions count for year '%d': %d", year, len(inYearSellOperations))
 
 	for _, sellOp := range inYearSellOperations {
@@ -128,7 +128,7 @@ func calculateReport(sellOps SellOperations, dividends ingest.TransactionLogItem
 	return &report
 }
 
-func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCollection, allowThreeYearsTimeTest bool) {
+func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemsToSell, allowThreeYearsTimeTest bool) {
 
 	timeTestDate := util.GetDateThreeYearsBefore(sellOp.sellItem.Date)
 
@@ -189,22 +189,6 @@ func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemToSellCol
 	}
 }
 
-func getSalesInYear(sellOperations SellOperations, from time.Time, to time.Time) (ret SellOperations) {
-	fromExclusive := from.Add(-1 * time.Second)
-	toExclusive := to.Add(1 * time.Second)
-	isTransactionTimestampBetween := func(item *SellOperation) bool {
-		return item.sellItem.Date.After(fromExclusive) && item.sellItem.Date.Before(toExclusive)
-	}
-	return filterSellOperations(sellOperations, isTransactionTimestampBetween)
-}
-
-func getAvailableItemsToSell(itemsToSell ItemToSellCollection, sellTransaction *ingest.TransactionLogItem) (ret ItemToSellCollection) {
-	test := func(itemToSell *ItemToSell) bool {
-		return strings.EqualFold(itemToSell.buyItem.Name, sellTransaction.Name) && itemToSell.availableQuantity > 0.0
-	}
-	return filterItemsToSell(itemsToSell, test)
-}
-
 func getTransactionsInYear(transactions ingest.TransactionLogItems, from time.Time, to time.Time) (ret ingest.TransactionLogItems) {
 	fromExclusive := from.Add(-1 * time.Second)
 	toExclusive := to.Add(1 * time.Second)
@@ -212,24 +196,6 @@ func getTransactionsInYear(transactions ingest.TransactionLogItems, from time.Ti
 		return item.Date.After(fromExclusive) && item.Date.Before(toExclusive)
 	}
 	return filterTransactionLog(transactions, isTransactionTimestampBetween)
-}
-
-func filterSellOperations(list SellOperations, test func(*SellOperation) bool) (ret SellOperations) {
-	for _, item := range list {
-		if test(item) {
-			ret = append(ret, item)
-		}
-	}
-	return
-}
-
-func filterItemsToSell(list ItemToSellCollection, test func(*ItemToSell) bool) (ret ItemToSellCollection) {
-	for _, item := range list {
-		if test(item) {
-			ret = append(ret, item)
-		}
-	}
-	return
 }
 
 func filterTransactionLog(list ingest.TransactionLogItems, test func(*ingest.TransactionLogItem) bool) (ret ingest.TransactionLogItems) {
