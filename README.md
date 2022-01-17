@@ -8,7 +8,7 @@ When executed it generates reports for each year (with some revenue) in Excel fo
 
 It is mandatory to file taxes of year profit:
 
-* if year *stocks* revenue is at more than 100,000 CZK
+* if year *stocks* revenue is more than 100,000 CZK
 * or if year *other* (*cryptos*, *dividends*, ...) revenue is more than 6,000 CZK
 
 The revenue might be lowered by revenue of *stocks* hold more than 3 years. In case of this time tested revenue is more than 5,000,000 CZK it needs to be noted (but no tax is paid).
