@@ -7,29 +7,30 @@ import (
 )
 
 type SoldItem struct {
-	buyItem      *ingest.TransactionLogItem
-	soldQuantity float64
-	timeTested   bool
-	fifoBuy      *ValueAndFee
+	BuyItem      *ingest.TransactionLogItem
+	SoldQuantity float64
+	TimeTested   bool
+	FifoBuy      *ValueAndFee
+	Revenue      *ValueAndFee
 }
 
 func (x *SoldItem) String() string {
 	return fmt.Sprintf("buyItem:%+v soldQuantity:%v timeTested:%v fifoBuy:(%v)",
-		x.buyItem, x.soldQuantity, x.timeTested, x.fifoBuy)
+		x.BuyItem, x.SoldQuantity, x.TimeTested, x.FifoBuy)
 }
 
 type SoldItems []*SoldItem
 
 type SellOperation struct {
-	sellItem          *ingest.TransactionLogItem
-	soldItems         SoldItems
+	SellItem          *ingest.TransactionLogItem
+	SoldItems         SoldItems
 	timeTestedRevenue *AccountingValue
 	totalRevenue      *AccountingValue
 }
 
 func (x *SellOperation) String() string {
 	return fmt.Sprintf("sellItem:%+v totalRevenue:(%v) timeTestedRevenue:(%v) soldItems:[%+v]",
-		x.sellItem, x.totalRevenue, x.timeTestedRevenue, &x.soldItems)
+		x.SellItem, x.totalRevenue, x.timeTestedRevenue, &x.SoldItems)
 }
 
 type SellOperations []*SellOperation
@@ -37,8 +38,8 @@ type SellOperations []*SellOperation
 func convertToSellOperations(sales ingest.TransactionLogItems) (resItems SellOperations) {
 	for _, sellItem := range sales {
 		resItems = append(resItems, &SellOperation{
-			sellItem:          sellItem,
-			soldItems:         SoldItems{},
+			SellItem:          sellItem,
+			SoldItems:         SoldItems{},
 			timeTestedRevenue: newAccountingValue(0, 0, DEFAULT_CURRENCY),
 			totalRevenue:      newAccountingValue(0, 0, DEFAULT_CURRENCY),
 		})

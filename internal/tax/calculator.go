@@ -55,8 +55,8 @@ func getItemSales(sellTransactions ingest.TransactionLogItems, itemsToSell Items
 	log.Infof("sale transactions count for year '%d': %d", year, len(inYearSellOperations))
 
 	for _, sellOp := range inYearSellOperations {
-		availableBuyItems := getAvailableItemsToSell(itemsToSell, sellOp.sellItem)
-		log.Debugf("sell '%s' available buy items: %v", sellOp.sellItem.Name, availableBuyItems)
+		availableBuyItems := getAvailableItemsToSell(itemsToSell, sellOp.SellItem)
+		log.Debugf("sell '%s' available buy items: %v", sellOp.SellItem.Name, availableBuyItems)
 
 		calculateSellExpense(sellOp, availableBuyItems, allowThreeYearsTimeTest)
 		log.Debugf("sell operation processed: '%+v'", sellOp)
@@ -81,22 +81,22 @@ func calculateReport(sellOps SellOperations, dividends ingest.TransactionLogItem
 	for _, sellOp := range sellOps {
 		timeTestedQuantity := 0.0
 		// sum expenses and buy fees of all sold items
-		for _, soldItem := range sellOp.soldItems {
-			report.TotalItemFifoExpense.Value.Add(soldItem.fifoBuy.Value)
-			report.TotalItemFifoExpense.Fee.Add(soldItem.fifoBuy.Fee)
-			if soldItem.timeTested {
-				timeTestedQuantity += soldItem.soldQuantity
-				report.TimeTestedItemFifoExpense.Value.Add(soldItem.fifoBuy.Value)
-				report.TimeTestedItemFifoExpense.Fee.Add(soldItem.fifoBuy.Fee)
+		for _, soldItem := range sellOp.SoldItems {
+			report.TotalItemFifoExpense.Value.Add(soldItem.FifoBuy.Value)
+			report.TotalItemFifoExpense.Fee.Add(soldItem.FifoBuy.Fee)
+			if soldItem.TimeTested {
+				timeTestedQuantity += soldItem.SoldQuantity
+				report.TimeTestedItemFifoExpense.Value.Add(soldItem.FifoBuy.Value)
+				report.TimeTestedItemFifoExpense.Fee.Add(soldItem.FifoBuy.Fee)
 			}
 		}
-		timeTestedRatio := timeTestedQuantity / sellOp.sellItem.Quantity
+		timeTestedRatio := timeTestedQuantity / sellOp.SellItem.Quantity
 
 		// calculate revenue and sell fees
 		report.TotalItemRevenue.Add(sellOp.totalRevenue)
 		sellStockFee := newAccountingValue(
-			sellOp.sellItem.Fee*sellOp.sellItem.DayExchangeRate,
-			sellOp.sellItem.Fee*sellOp.sellItem.YearExchangeRate,
+			sellOp.SellItem.Fee*sellOp.SellItem.DayExchangeRate,
+			sellOp.SellItem.Fee*sellOp.SellItem.YearExchangeRate,
 			report.Currency)
 		report.TotalItemFifoExpense.Fee.Add(sellStockFee)
 		report.TimeTestedItemRevenue.Add(sellOp.timeTestedRevenue)
@@ -130,58 +130,64 @@ func calculateReport(sellOps SellOperations, dividends ingest.TransactionLogItem
 
 func calculateSellExpense(sellOp *SellOperation, availableBuyItems ItemsToSell, allowThreeYearsTimeTest bool) {
 
-	timeTestDate := util.GetDateThreeYearsBefore(sellOp.sellItem.Date)
+	timeTestDate := util.GetDateThreeYearsBefore(sellOp.SellItem.Date)
 
-	quantityToBeSold := sellOp.sellItem.Quantity
+	quantityToBeSold := sellOp.SellItem.Quantity
 	for _, itemToSell := range availableBuyItems {
 		if itemToSell.availableQuantity <= 0.0 {
 			continue
 		}
 
 		soldItem := &SoldItem{
-			buyItem: itemToSell.buyItem,
+			BuyItem: itemToSell.buyItem,
 			// 3 years time test
-			timeTested: allowThreeYearsTimeTest && itemToSell.buyItem.Date.Sub(timeTestDate).Nanoseconds() < 0,
-			fifoBuy:    newEmptyValueAndFee(DEFAULT_CURRENCY),
+			TimeTested: allowThreeYearsTimeTest && itemToSell.buyItem.Date.Sub(timeTestDate).Nanoseconds() < 0,
+			FifoBuy:    newEmptyValueAndFee(DEFAULT_CURRENCY),
+			Revenue:    newEmptyValueAndFee(DEFAULT_CURRENCY),
 		}
 		soldBuyItemRatio := 0.0
 		newAvailableQuantity := itemToSell.availableQuantity - quantityToBeSold
 		if newAvailableQuantity >= 0.0 {
 			// sell operation has all buys processed
-			soldItem.soldQuantity = quantityToBeSold
+			soldItem.SoldQuantity = quantityToBeSold
 			itemToSell.availableQuantity = newAvailableQuantity
-			soldBuyItemRatio = soldItem.soldQuantity / itemToSell.buyItem.Quantity
+			soldBuyItemRatio = soldItem.SoldQuantity / itemToSell.buyItem.Quantity
 		} else {
 			// some buy items are still required to be sold by this sell operation
 			quantityToBeSold -= itemToSell.availableQuantity
-			soldItem.soldQuantity = itemToSell.availableQuantity
+			soldItem.SoldQuantity = itemToSell.availableQuantity
 			// noting remains to be sold in the buy item
 			itemToSell.availableQuantity = 0.0
-			soldBuyItemRatio = soldItem.soldQuantity / itemToSell.buyItem.Quantity
+			soldBuyItemRatio = soldItem.SoldQuantity / itemToSell.buyItem.Quantity
 		}
 
 		// calculate purchase for this item
-		soldItem.fifoBuy.Value = newAccountingValue(
+		soldItem.FifoBuy.Value = newAccountingValue(
 			soldBuyItemRatio*itemToSell.buyItem.BankAmount*itemToSell.buyItem.DayExchangeRate,
 			soldBuyItemRatio*itemToSell.buyItem.BankAmount*itemToSell.buyItem.YearExchangeRate,
 			DEFAULT_CURRENCY)
-		soldItem.fifoBuy.Fee = newAccountingValue(
+		soldItem.FifoBuy.Fee = newAccountingValue(
 			soldBuyItemRatio*itemToSell.buyItem.Fee*itemToSell.buyItem.DayExchangeRate,
 			soldBuyItemRatio*itemToSell.buyItem.Fee*itemToSell.buyItem.YearExchangeRate,
 			DEFAULT_CURRENCY)
 		// calculate revenue for this buy item
-		soldRatio := soldItem.soldQuantity / sellOp.sellItem.Quantity
-		revenue := newAccountingValue(
-			soldRatio*sellOp.sellItem.BrokerAmount*sellOp.sellItem.DayExchangeRate,
-			soldRatio*sellOp.sellItem.BrokerAmount*sellOp.sellItem.YearExchangeRate,
+		soldRatio := soldItem.SoldQuantity / sellOp.SellItem.Quantity
+		soldItem.Revenue.Value = newAccountingValue(
+			soldRatio*sellOp.SellItem.BrokerAmount*sellOp.SellItem.DayExchangeRate,
+			soldRatio*sellOp.SellItem.BrokerAmount*sellOp.SellItem.YearExchangeRate,
 			DEFAULT_CURRENCY)
-		if soldItem.timeTested {
-			sellOp.timeTestedRevenue.Add(revenue)
-		}
-		sellOp.totalRevenue.Add(revenue)
+		soldItem.Revenue.Fee = newAccountingValue(
+			soldRatio*sellOp.SellItem.Fee*sellOp.SellItem.DayExchangeRate,
+			soldRatio*sellOp.SellItem.Fee*sellOp.SellItem.YearExchangeRate,
+			DEFAULT_CURRENCY)
 
-		sellOp.soldItems = append(sellOp.soldItems, soldItem)
-		itemToSell.soldByItems = append(itemToSell.soldByItems, sellOp.sellItem)
+		if soldItem.TimeTested {
+			sellOp.timeTestedRevenue.Add(soldItem.Revenue.Value)
+		}
+		sellOp.totalRevenue.Add(soldItem.Revenue.Value)
+
+		sellOp.SoldItems = append(sellOp.SoldItems, soldItem)
+		itemToSell.soldByItems = append(itemToSell.soldByItems, sellOp.SellItem)
 
 		if newAvailableQuantity >= 0.0 {
 			return

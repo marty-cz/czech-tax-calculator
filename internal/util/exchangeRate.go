@@ -69,9 +69,10 @@ type ExchangeRate struct {
 }
 
 var (
-	EUR *Currency = &Currency{Name: "EUR", Symbol: "€"}
-	USD *Currency = &Currency{Name: "USD", Symbol: "$"}
-	CZK *Currency = &Currency{Name: "CZK", Symbol: "Kč"}
+	EUR                 *Currency   = &Currency{Name: "EUR", Symbol: "€"}
+	USD                 *Currency   = &Currency{Name: "USD", Symbol: "$"}
+	CZK                 *Currency   = &Currency{Name: "CZK", Symbol: "Kč"}
+	SupportedCurrencies []*Currency = []*Currency{EUR, USD, CZK}
 )
 
 func GetCurrencyByName(name string) (*Currency, error) {

@@ -9,6 +9,11 @@ func GetColumnLetter(colIndex int) string {
 	return string(rune('A' + colIndex))
 }
 
+// input params are 0-based
+func GetExcelCoords(rowIndex, colIndex int) string {
+	return fmt.Sprintf("%s%d", GetColumnLetter(colIndex), rowIndex+1)
+}
+
 func IsRowEmpty(row []string, nameColIndex int) bool {
 	if nameColIndex >= 0 && nameColIndex < len(row) {
 		return strings.TrimSpace(row[nameColIndex]) == ""
