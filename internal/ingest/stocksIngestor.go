@@ -3,6 +3,7 @@ package ingest
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/marty-cz/czech-tax-calculator/internal/util"
 	log "github.com/sirupsen/logrus"
@@ -42,6 +43,7 @@ var (
 		"PAID TAX": 4,
 		"BROKER":   5,
 		"CURRENCY": 6,
+		"COUNTRY":  7,
 	}
 )
 
@@ -149,6 +151,10 @@ func newStockDividendItem(row []string) (_ *TransactionLogItem, err error) {
 	}
 	if item.YearExchangeRate, err = util.GetCzkExchangeRateInYear(item.Date, *item.Currency); err != nil {
 		return nil, fmt.Errorf("cannot get year exchange rate for %v from %v: %v", item.Currency, item.Date, err)
+	}
+	item.Country = strings.ToUpper(row[stockDividendTblLegend["COUNTRY"]])
+	if item.Country == "" {
+		return nil, fmt.Errorf("cannot get country")
 	}
 	return &item, nil
 }

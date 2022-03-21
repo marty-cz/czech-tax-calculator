@@ -61,39 +61,62 @@ func writeOverviewStatement(w *util.ExcelWriter, report *tax.Report, itemTypeStr
 	coordsTSPD := w.WriteAccountingEqCell(sheet, row, col+1, fmt.Sprintf("%s-%s-%s", coordsTSRD, coordsTSED, coordsTSFD), report.Currency)
 	coordsTSPY := w.WriteAccountingEqCell(sheet, row, col+2, fmt.Sprintf("%s-%s-%s", coordsTSRY, coordsTSEY, coordsTSFY), report.Currency)
 
-	row += 2
-	w.WriteCell(sheet, row, col, "Dividends (tax payed already)")
-	w.WriteCell(sheet, row, col+1, "with DAY exchange rate")
-	w.WriteCell(sheet, row, col+2, "with YEAR exchange rate")
-	row++
-	w.WriteCell(sheet, row, col, "Revenue")
-	coordsDRD := w.WriteAccountingCell(sheet, row, col+1, report.DividendRevenue.Value.ValueWithDayExchangeRate, report.DividendRevenue.Value.Currency)
-	coordsDRY := w.WriteAccountingCell(sheet, row, col+2, report.DividendRevenue.Value.ValueWithYearExchangeRate, report.DividendRevenue.Value.Currency)
-	row++
-	w.WriteCell(sheet, row, col, "Fees")
-	coordsDFD := w.WriteAccountingCell(sheet, row, col+1, report.DividendRevenue.Fee.ValueWithYearExchangeRate, report.DividendRevenue.Fee.Currency)
-	coordsDFY := w.WriteAccountingCell(sheet, row, col+2, report.DividendRevenue.Fee.ValueWithYearExchangeRate, report.DividendRevenue.Fee.Currency)
-	row++
-	w.WriteCell(sheet, row, col, "Profit")
-	coordsDPD := w.WriteAccountingEqCell(sheet, row, col+1, fmt.Sprintf("%s-%s", coordsDRD, coordsDFD), report.Currency)
-	coordsDPY := w.WriteAccountingEqCell(sheet, row, col+2, fmt.Sprintf("%s-%s", coordsDRY, coordsDFY), report.Currency)
+	var coordsEqSumDRDs string
+	var coordsEqSumDRYs string
+	var coordsEqSumDFDs string
+	var coordsEqSumDFYs string
+	var coordsEqSumDPDs string
+	var coordsEqSumDPYs string
+	i := 0
 
 	row += 2
-	w.WriteCell(sheet, row, col, "Dividends (to pay tax from)")
+	w.WriteCell(sheet, row, col, "Dividends (details)")
+	w.WriteCell(sheet, row, col+1, "Country")
+	w.WriteCell(sheet, row, col+2, "with DAY exchange rate")
+	w.WriteCell(sheet, row, col+3, "with YEAR exchange rate")
+	for country, dividendReport := range report.DividendReports {
+		row++
+		w.WriteCell(sheet, row, col, "Revenue")
+		w.WriteCell(sheet, row, col+1, country)
+		coordsDRD := w.WriteAccountingCell(sheet, row, col+2, dividendReport.RawRevenue.Value.ValueWithDayExchangeRate, dividendReport.RawRevenue.Value.Currency)
+		coordsEqSumDRDs += "+" + coordsDRD
+		coordsDRY := w.WriteAccountingCell(sheet, row, col+3, dividendReport.RawRevenue.Value.ValueWithYearExchangeRate, dividendReport.RawRevenue.Value.Currency)
+		coordsEqSumDRYs += "+" + coordsDRY
+		row++
+		w.WriteCell(sheet, row, col, "Paid Tax")
+		coordsDTD := w.WriteAccountingCell(sheet, row, col+2, dividendReport.PaidTax.ValueWithDayExchangeRate, dividendReport.PaidTax.Currency)
+		coordsDTY := w.WriteAccountingCell(sheet, row, col+3, dividendReport.PaidTax.ValueWithYearExchangeRate, dividendReport.PaidTax.Currency)
+		row++
+		w.WriteCell(sheet, row, col, "Fees")
+		coordsDFD := w.WriteAccountingCell(sheet, row, col+2, dividendReport.RawRevenue.Fee.ValueWithDayExchangeRate, dividendReport.RawRevenue.Fee.Currency)
+		coordsEqSumDFDs += "+" + coordsDFD
+		coordsDFY := w.WriteAccountingCell(sheet, row, col+3, dividendReport.RawRevenue.Fee.ValueWithYearExchangeRate, dividendReport.RawRevenue.Fee.Currency)
+		coordsEqSumDFYs += "+" + coordsDFY
+		row++
+		w.WriteCell(sheet, row, col, "Profit")
+		coordsDPD := w.WriteAccountingEqCell(sheet, row, col+2, fmt.Sprintf("%s-%s-%s", coordsDRD, coordsDTD, coordsDFD), report.Currency)
+		coordsEqSumDPDs += "+" + coordsDPD
+		coordsDPY := w.WriteAccountingEqCell(sheet, row, col+3, fmt.Sprintf("%s-%s-%s", coordsDRY, coordsDTY, coordsDFY), report.Currency)
+		coordsEqSumDPYs += "+" + coordsDPY
+		i++
+	}
+
+	row += 2
+	w.WriteCell(sheet, row, col, "Dividends (summary)")
 	w.WriteCell(sheet, row, col+1, "with DAY exchange rate")
 	w.WriteCell(sheet, row, col+2, "with YEAR exchange rate")
 	row++
 	w.WriteCell(sheet, row, col, "Revenue")
-	coordsDTRD := w.WriteAccountingCell(sheet, row, col+1, report.DividendRevenueWithNoTaxPayed.Value.ValueWithDayExchangeRate, report.DividendRevenueWithNoTaxPayed.Value.Currency)
-	coordsDTRY := w.WriteAccountingCell(sheet, row, col+2, report.DividendRevenueWithNoTaxPayed.Value.ValueWithYearExchangeRate, report.DividendRevenueWithNoTaxPayed.Value.Currency)
+	coordsDRD := w.WriteAccountingEqCell(sheet, row, col+1, coordsEqSumDRDs, report.Currency)
+	coordsDRY := w.WriteAccountingEqCell(sheet, row, col+2, coordsEqSumDRYs, report.Currency)
 	row++
 	w.WriteCell(sheet, row, col, "Fees")
-	coordsDTFD := w.WriteAccountingCell(sheet, row, col+1, report.DividendRevenueWithNoTaxPayed.Fee.ValueWithYearExchangeRate, report.DividendRevenueWithNoTaxPayed.Fee.Currency)
-	coordsDTFY := w.WriteAccountingCell(sheet, row, col+2, report.DividendRevenueWithNoTaxPayed.Fee.ValueWithYearExchangeRate, report.DividendRevenueWithNoTaxPayed.Fee.Currency)
+	w.WriteAccountingEqCell(sheet, row, col+1, coordsEqSumDFDs, report.Currency)
+	w.WriteAccountingEqCell(sheet, row, col+2, coordsEqSumDFYs, report.Currency)
 	row++
 	w.WriteCell(sheet, row, col, "Profit")
-	coordsDTPD := w.WriteAccountingEqCell(sheet, row, col+1, fmt.Sprintf("%s-%s", coordsDTRD, coordsDTFD), report.Currency)
-	coordsDTPY := w.WriteAccountingEqCell(sheet, row, col+2, fmt.Sprintf("%s-%s", coordsDTRY, coordsDTFY), report.Currency)
+	coordsDPD := w.WriteAccountingEqCell(sheet, row, col+1, coordsEqSumDPDs, report.Currency)
+	coordsDPY := w.WriteAccountingEqCell(sheet, row, col+2, coordsEqSumDPYs, report.Currency)
 
 	row += 2
 	w.WriteCell(sheet, row, col, "Additional")
@@ -121,13 +144,13 @@ func writeOverviewStatement(w *util.ExcelWriter, report *tax.Report, itemTypeStr
 	row++
 	w.WriteCell(sheet, row, col, "Total Revenue")
 	// revenue - Time Tested revenue + Dividend revenue + Dividend (to pay tax) revenue + Additional revenue
-	w.WriteAccountingEqCell(sheet, row, col+1, fmt.Sprintf("(%s-%s)+%s+%s+%s", coordsSRD, coordsTSRD, coordsDRD, coordsDTRD, coordsARD), report.Currency)
-	w.WriteAccountingEqCell(sheet, row, col+2, fmt.Sprintf("(%s-%s)+%s+%s+%s", coordsSRY, coordsTSRY, coordsDRY, coordsDTRY, coordsARY), report.Currency)
+	w.WriteAccountingEqCell(sheet, row, col+1, fmt.Sprintf("(%s-%s)+%s+%s", coordsSRD, coordsTSRD, coordsDRD, coordsARD), report.Currency)
+	w.WriteAccountingEqCell(sheet, row, col+2, fmt.Sprintf("(%s-%s)+%s+%s", coordsSRY, coordsTSRY, coordsDRY, coordsARY), report.Currency)
 	row++
 	w.WriteCell(sheet, row, col, "Total Profit")
 	// profit - Time Tested profit + Dividend Profit + Dividend (to pay tax) profit + Additional profit
-	w.WriteAccountingEqCell(sheet, row, col+1, fmt.Sprintf("(%s-%s)+%s+%s+%s", coordsSPD, coordsTSPD, coordsDPD, coordsDTPD, coordsAPD), report.Currency)
-	w.WriteAccountingEqCell(sheet, row, col+2, fmt.Sprintf("(%s-%s)+%s+%s+%s", coordsSPY, coordsTSPY, coordsDPY, coordsDTPY, coordsAPY), report.Currency)
+	w.WriteAccountingEqCell(sheet, row, col+1, fmt.Sprintf("(%s-%s)+%s+%s", coordsSPD, coordsTSPD, coordsDPD, coordsAPD), report.Currency)
+	w.WriteAccountingEqCell(sheet, row, col+2, fmt.Sprintf("(%s-%s)+%s+%s", coordsSPY, coordsTSPY, coordsDPY, coordsAPY), report.Currency)
 
 	return nil
 }

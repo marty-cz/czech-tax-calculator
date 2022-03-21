@@ -49,6 +49,8 @@ type TransactionLogItem struct {
 	YearExchangeRate float64
 	// type of transaction
 	Operation TransactionType
+	// origin/target country where item was received/buyed
+	Country string
 }
 
 type TransactionLogItems []*TransactionLogItem
