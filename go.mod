@@ -1,10 +1,11 @@
 module github.com/marty-cz/czech-tax-calculator
 
-go 1.17
+go 1.20
+
 
 require (
-	github.com/sirupsen/logrus v1.8.1
-	github.com/xuri/excelize/v2 v2.5.0
+	github.com/sirupsen/logrus v1.9.0
+	github.com/xuri/excelize/v2 v2.7.0
 )
 
 require (
