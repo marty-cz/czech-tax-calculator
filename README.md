@@ -18,7 +18,7 @@ The revenue might be lowered by revenue of *stocks* hold more than 3 years. In c
 There are two options but they have to be used consistently through whole tax report:
 
 1. **Uniform year exchange rate** is published by ČNB (Czech National Bank) for *previous calendar year*.
-2. **Daily exchange rate** is published by ČNB (Czech National Bank) for *past business day*.
+2. **Daily exchange rate** is published by ČNB (Czech National Bank) for *past business day*. This option is available for people doing *bookkeeping* only (see [Pokyn GFŘ-D-54](https://www.sagit.cz/info/fz22001)).
 
 ### Purchase Price of Stock/Cryptocurrency
 
