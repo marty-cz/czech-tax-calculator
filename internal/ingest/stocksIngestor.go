@@ -2,6 +2,7 @@ package ingest
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 
@@ -10,6 +11,7 @@ import (
 	excel "github.com/xuri/excelize/v2"
 )
 
+const MaxAllowedTax float64 = 0.15
 const StockItemType string = "stock"
 
 var (
@@ -156,6 +158,11 @@ func newStockDividendItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.Country == "" {
 		return nil, fmt.Errorf("cannot get country")
 	}
+	paidTax := 1 - (item.BankAmount / item.BrokerAmount)
+	if !leqWithTolerance(paidTax, MaxAllowedTax, 0.0001) {
+		item.BankAmount = item.BrokerAmount * (1 - MaxAllowedTax)
+		log.Warnf("Paid tax '%v' exceeds max allowed tax '%v' for item (%v) - adjusting Bank Amount according to %f", paidTax, MaxAllowedTax, item, item.BankAmount)
+	}
 	return &item, nil
 }
 
@@ -207,4 +214,12 @@ func ProcessStocks(filePath string) (_ *TransactionLog, err error) {
 	log.Infof("%ss: Ingested Additional Fees (count: %d)", StockItemType, len(transactions.AdditionalFees))
 
 	return &transactions, nil
+}
+
+func leqWithTolerance(a, b, tolerance float64) bool {
+	if diff := math.Abs(a - b); diff < tolerance {
+		return true
+	} else {
+		return a < b
+	}
 }
