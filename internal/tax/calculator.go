@@ -71,7 +71,7 @@ func calculateReport(sellOps SellOperations, dividends ingest.TransactionLogItem
 		Currency:                  DEFAULT_CURRENCY,
 		TotalItemRevenue:          newAccountingValue(0, 0, DEFAULT_CURRENCY),
 		TimeTestedItemRevenue:     newAccountingValue(0, 0, DEFAULT_CURRENCY),
-		DividendReports:           make(map[string]*DividendReport),
+		DividendReports:           make(map[string]*BrokerDividendReports),
 		AdditionalRevenue:         newEmptyValueAndFee(DEFAULT_CURRENCY),
 		TimeTestedItemFifoExpense: newEmptyValueAndFee(DEFAULT_CURRENCY),
 		TotalItemFifoExpense:      newEmptyValueAndFee(DEFAULT_CURRENCY),
@@ -105,12 +105,17 @@ func calculateReport(sellOps SellOperations, dividends ingest.TransactionLogItem
 
 	// calculate report for received dividends
 	for _, dividend := range dividends {
-		divReport, exist := report.DividendReports[dividend.Country]
+		brokerDivReports, exist := report.DividendReports[dividend.Country]
+		if !exist {
+			brokerDivReports = &BrokerDividendReports{}
+		}
+		divReport, exist := brokerDivReports.Get(dividend.Broker)
 		if !exist {
 			divReport = &DividendReport{
 				RawRevenue: newEmptyValueAndFee(DEFAULT_CURRENCY),
 				PaidTax:    newAccountingValue(0, 0, DEFAULT_CURRENCY),
 				Country:    dividend.Country,
+				Broker:     dividend.Broker,
 			}
 		}
 		divReport.RawRevenue.Value.Add(newAccountingValue(
@@ -124,7 +129,8 @@ func calculateReport(sellOps SellOperations, dividends ingest.TransactionLogItem
 			paidTax*dividend.DayExchangeRate,
 			paidTax*dividend.YearExchangeRate, report.Currency))
 
-		report.DividendReports[dividend.Country] = divReport
+		brokerDivReports.Set(divReport.Broker, divReport)
+		report.DividendReports[dividend.Country] = brokerDivReports
 	}
 	// calculate report for received additional income
 	for _, additionalIncome := range additionalIncomes {

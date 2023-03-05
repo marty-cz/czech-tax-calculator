@@ -11,8 +11,8 @@ type Report struct {
 	SellOperations        SellOperations
 	TimeTestedItemRevenue *AccountingValue
 	TotalItemRevenue      *AccountingValue
-	// map of dividends (value) in countries (key)
-	DividendReports           map[string]*DividendReport
+	// map of dividends per broker (value) in countries (key)
+	DividendReports           map[string]*BrokerDividendReports
 	AdditionalRevenue         *ValueAndFee
 	TimeTestedItemFifoExpense *ValueAndFee
 	TotalItemFifoExpense      *ValueAndFee
@@ -32,13 +32,31 @@ func (x *Report) String() string {
 // map of reports (value) in years (key)
 type Reports []*Report
 
+// map of dividends (value) in brokers (key)
+type BrokerDividendReports map[string]*DividendReport
+
+func (m BrokerDividendReports) GetAll() map[string]*DividendReport {
+	return m
+}
+
+func (m BrokerDividendReports) Get(broker string) (*DividendReport, bool) {
+	report, exists := m[broker]
+	return report, exists
+}
+
+func (m BrokerDividendReports) Set(broker string, report *DividendReport) error {
+	m[broker] = report
+	return nil
+}
+
 type DividendReport struct {
 	RawRevenue *ValueAndFee
 	PaidTax    *AccountingValue
 	Country    string
+	Broker     string
 }
 
 func (x *DividendReport) String() string {
-	return fmt.Sprintf("country:%v rawRevenue:(%v) paidTax:(%v)",
-		x.Country, x.RawRevenue, x.PaidTax)
+	return fmt.Sprintf("country:%v broker:%v rawRevenue:(%v) paidTax:(%v)",
+		x.Country, x.Broker, x.RawRevenue, x.PaidTax)
 }
