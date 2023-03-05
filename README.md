@@ -33,7 +33,7 @@ So, there are also two options how to calculate purchase price but they have to 
 
 ### Cryptocurrencies
 
-Cryptocurrencies are treated as an *Intangible moving asset* ("Nehmotný movitý majetek") => *Other income* ("Ostatní příjmy")  by Czech law (at least in 2022).
+Cryptocurrencies are treated as an *Intangible moving asset* ("Nehmotný movitý majetek") => *Other income* ("Ostatní příjmy") by Czech law (at least in 2022). In the tax statements they should be listed under "F - příjmy z úplatného převodu jiné věci".
 
 This means there is no time test available and it is not possible to combine profit from stocks and cryptos!
 
