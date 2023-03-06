@@ -90,6 +90,10 @@ func GetCurrencyByName(name string) (*Currency, error) {
 }
 
 func GetCzkExchangeRateInYear(date time.Time, currency Currency) (float64, error) {
+	if currency.Name == CZK.Name {
+		return 1.0, nil
+	}
+	
 	rate := -1.0
 	yearString := date.Format("2006") // YYYY
 
@@ -126,6 +130,10 @@ const DATE_DORMAT_FOR_CNB_DAY string = "02.01.2006" // DD.MM.YYYY
 const CNB_DAY_URL string = "https://www.cnb.cz/cs/financni-trhy/devizovy-trh/kurzy-devizoveho-trhu/kurzy-devizoveho-trhu/denni_kurz.txt?date="
 
 func GetCzkExchangeRateInDay(date time.Time, currency Currency) (float64, error) {
+	if currency.Name == CZK.Name {
+		return 1.0, nil
+	}
+
 	rate := -1.0
 	dateString := date.Format(DATE_DORMAT_FOR_CNB_DAY)
 	dateBeforeString := ""

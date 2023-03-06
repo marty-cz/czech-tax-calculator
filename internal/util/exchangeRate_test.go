@@ -30,6 +30,8 @@ func TestGetCzkExchangeRateInDay(t *testing.T) {
 		{"Not known currency", args{createDate(11, 1, 2021), Currency{Name: "XYZ", Symbol: "?"}}, -1.0, true},
 		// https://www.cnb.cz/cs/financni-trhy/devizovy-trh/kurzy-devizoveho-trhu/kurzy-devizoveho-trhu/denni_kurz.txt?date=11.01.1821
 		{"Date out of range", args{createDate(11, 1, 1821), *EUR}, -1.0, true},
+		// https://www.cnb.cz/cs/financni-trhy/devizovy-trh/kurzy-devizoveho-trhu/kurzy-devizoveho-trhu/denni_kurz.txt?date=11.01.1821
+		{"CZK exchange rate is 1.0", args{createDate(11, 1, 1821), *CZK}, 1.0, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
