@@ -142,6 +142,7 @@ func newStockDividendItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.BankAmount, err = strconv.ParseFloat(row[stockDividendTblLegend["RECEIVED"]], 64); err != nil {
 		return nil, fmt.Errorf("received is not a number: %v", err)
 	}
+	item.OriginalBankAmount = item.BankAmount
 	if item.BrokerAmount, err = strconv.ParseFloat(row[stockDividendTblLegend["AMOUNT"]], 64); err != nil {
 		return nil, fmt.Errorf("amount is not a number: %v", err)
 	}

@@ -73,33 +73,38 @@ func writeOverviewStatement(w *util.ExcelWriter, report *tax.Report, itemTypeStr
 	w.WriteCell(sheet, row, col, "Dividends (details)")
 	w.WriteCell(sheet, row, col+1, "Country")
 	w.WriteCell(sheet, row, col+2, "Broker")
-	w.WriteCell(sheet, row, col+3, "with DAY exchange rate")
-	w.WriteCell(sheet, row, col+4, "with YEAR exchange rate")
+	w.WriteCell(sheet, row, col+3, "Original value")
+	w.WriteCell(sheet, row, col+4, "with DAY exchange rate")
+	w.WriteCell(sheet, row, col+5, "with YEAR exchange rate")
 	for country, brokerDividendReports := range report.DividendReports {
 		for broker, dividendReport := range brokerDividendReports.GetAll() {
 			row++
 			w.WriteCell(sheet, row, col, "Revenue")
 			w.WriteCell(sheet, row, col+1, country)
 			w.WriteCell(sheet, row, col+2, broker)
-			coordsDRD := w.WriteAccountingCell(sheet, row, col+3, dividendReport.RawRevenue.Value.ValueWithDayExchangeRate, dividendReport.RawRevenue.Value.Currency)
+			coordsDRO := w.WriteAccountingCell(sheet, row, col+3, dividendReport.OriginalRawRevenue.Value.ValueWithDayExchangeRate, dividendReport.OriginalRawRevenue.Value.Currency)
+			coordsDRD := w.WriteAccountingCell(sheet, row, col+4, dividendReport.RawRevenue.Value.ValueWithDayExchangeRate, dividendReport.RawRevenue.Value.Currency)
 			coordsEqSumDRDs += "+" + coordsDRD
-			coordsDRY := w.WriteAccountingCell(sheet, row, col+4, dividendReport.RawRevenue.Value.ValueWithYearExchangeRate, dividendReport.RawRevenue.Value.Currency)
+			coordsDRY := w.WriteAccountingCell(sheet, row, col+5, dividendReport.RawRevenue.Value.ValueWithYearExchangeRate, dividendReport.RawRevenue.Value.Currency)
 			coordsEqSumDRYs += "+" + coordsDRY
 			row++
 			w.WriteCell(sheet, row, col, "Paid Tax")
-			coordsDTD := w.WriteAccountingCell(sheet, row, col+3, dividendReport.PaidTax.ValueWithDayExchangeRate, dividendReport.PaidTax.Currency)
-			coordsDTY := w.WriteAccountingCell(sheet, row, col+4, dividendReport.PaidTax.ValueWithYearExchangeRate, dividendReport.PaidTax.Currency)
+			coordsDTO := w.WriteAccountingCell(sheet, row, col+3, dividendReport.OriginalPaidTax.ValueWithDayExchangeRate, dividendReport.OriginalPaidTax.Currency)
+			coordsDTD := w.WriteAccountingCell(sheet, row, col+4, dividendReport.PaidTax.ValueWithDayExchangeRate, dividendReport.PaidTax.Currency)
+			coordsDTY := w.WriteAccountingCell(sheet, row, col+5, dividendReport.PaidTax.ValueWithYearExchangeRate, dividendReport.PaidTax.Currency)
 			row++
 			w.WriteCell(sheet, row, col, "Fees")
-			coordsDFD := w.WriteAccountingCell(sheet, row, col+3, dividendReport.RawRevenue.Fee.ValueWithDayExchangeRate, dividendReport.RawRevenue.Fee.Currency)
+			coordsDFO := w.WriteAccountingCell(sheet, row, col+3, dividendReport.OriginalRawRevenue.Fee.ValueWithDayExchangeRate, dividendReport.OriginalRawRevenue.Fee.Currency)
+			coordsDFD := w.WriteAccountingCell(sheet, row, col+4, dividendReport.RawRevenue.Fee.ValueWithDayExchangeRate, dividendReport.RawRevenue.Fee.Currency)
 			coordsEqSumDFDs += "+" + coordsDFD
-			coordsDFY := w.WriteAccountingCell(sheet, row, col+4, dividendReport.RawRevenue.Fee.ValueWithYearExchangeRate, dividendReport.RawRevenue.Fee.Currency)
+			coordsDFY := w.WriteAccountingCell(sheet, row, col+5, dividendReport.RawRevenue.Fee.ValueWithYearExchangeRate, dividendReport.RawRevenue.Fee.Currency)
 			coordsEqSumDFYs += "+" + coordsDFY
 			row++
 			w.WriteCell(sheet, row, col, "Profit")
-			coordsDPD := w.WriteAccountingEqCell(sheet, row, col+3, fmt.Sprintf("%s-%s-%s", coordsDRD, coordsDTD, coordsDFD), report.Currency)
+			w.WriteAccountingEqCell(sheet, row, col+3, fmt.Sprintf("%s-%s-%s", coordsDRO, coordsDTO, coordsDFO), dividendReport.OriginalRawRevenue.Value.Currency)
+			coordsDPD := w.WriteAccountingEqCell(sheet, row, col+4, fmt.Sprintf("%s-%s-%s", coordsDRD, coordsDTD, coordsDFD), report.Currency)
 			coordsEqSumDPDs += "+" + coordsDPD
-			coordsDPY := w.WriteAccountingEqCell(sheet, row, col+4, fmt.Sprintf("%s-%s-%s", coordsDRY, coordsDTY, coordsDFY), report.Currency)
+			coordsDPY := w.WriteAccountingEqCell(sheet, row, col+5, fmt.Sprintf("%s-%s-%s", coordsDRY, coordsDTY, coordsDFY), report.Currency)
 			coordsEqSumDPYs += "+" + coordsDPY
 			i++
 		}

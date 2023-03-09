@@ -50,8 +50,10 @@ func (m BrokerDividendReports) Set(broker string, report *DividendReport) error 
 }
 
 type DividendReport struct {
-	RawRevenue *ValueAndFee
-	PaidTax    *AccountingValue
+	RawRevenue         *ValueAndFee
+	PaidTax            *AccountingValue
+	OriginalRawRevenue *ValueAndFee
+	OriginalPaidTax    *AccountingValue
 	Country    string
 	Broker     string
 }

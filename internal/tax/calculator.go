@@ -112,8 +112,10 @@ func calculateReport(sellOps SellOperations, dividends ingest.TransactionLogItem
 		divReport, exist := brokerDivReports.Get(dividend.Broker)
 		if !exist {
 			divReport = &DividendReport{
-				RawRevenue: newEmptyValueAndFee(DEFAULT_CURRENCY),
-				PaidTax:    newAccountingValue(0, 0, DEFAULT_CURRENCY),
+				RawRevenue:         newEmptyValueAndFee(DEFAULT_CURRENCY),
+				PaidTax:            newAccountingValue(0, 0, DEFAULT_CURRENCY),
+				OriginalRawRevenue: newEmptyValueAndFee(dividend.Currency),
+				OriginalPaidTax:    newAccountingValue(0, 0, dividend.Currency),
 				Country:    dividend.Country,
 				Broker:     dividend.Broker,
 			}
@@ -124,10 +126,14 @@ func calculateReport(sellOps SellOperations, dividends ingest.TransactionLogItem
 		divReport.RawRevenue.Fee.Add(newAccountingValue(
 			dividend.Fee*dividend.DayExchangeRate,
 			dividend.Fee*dividend.YearExchangeRate, report.Currency))
+		divReport.OriginalRawRevenue.Value.Add(newAccountingValue(dividend.BrokerAmount, dividend.BrokerAmount, dividend.Currency))
+		divReport.OriginalRawRevenue.Fee.Add(newAccountingValue(dividend.Fee, dividend.Fee, dividend.Currency))
 		paidTax := dividend.BrokerAmount - dividend.BankAmount
 		divReport.PaidTax.Add(newAccountingValue(
 			paidTax*dividend.DayExchangeRate,
 			paidTax*dividend.YearExchangeRate, report.Currency))
+		originalPaidTax := dividend.BrokerAmount - dividend.OriginalBankAmount
+		divReport.OriginalPaidTax.Add(newAccountingValue(originalPaidTax, originalPaidTax, dividend.Currency))
 
 		brokerDivReports.Set(divReport.Broker, divReport)
 		report.DividendReports[dividend.Country] = brokerDivReports

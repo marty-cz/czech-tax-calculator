@@ -32,8 +32,10 @@ type TransactionLogItem struct {
 	Date time.Time
 	// price per single item
 	ItemPrice float64
-	// amount of money send/received from/to a personal bank account
+	// adjusted (due to tax limitation) amount of money send/received from/to a personal bank account
 	BankAmount float64
+	// non-adjusted amount of money send/received from/to a personal bank account
+	OriginalBankAmount float64
 	// amount of money used to buy/sell actual item at broker
 	BrokerAmount float64
 	Fee          float64
