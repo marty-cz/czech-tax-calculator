@@ -2,7 +2,6 @@ package ingest
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 
@@ -67,6 +66,7 @@ func newStockBuyItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.BankAmount, err = strconv.ParseFloat(row[stockBuyTblLegend["PAID"]], 64); err != nil {
 		return nil, fmt.Errorf("paid is not a number: %v", err)
 	}
+	item.OriginalBankAmount = item.BankAmount
 	if item.BrokerAmount, err = strconv.ParseFloat(row[stockBuyTblLegend["AMOUNT"]], 64); err != nil {
 		return nil, fmt.Errorf("amount is not a number: %v", err)
 	}
@@ -85,7 +85,7 @@ func newStockBuyItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.YearExchangeRate, err = util.GetCzkExchangeRateInYear(item.Date, *item.Currency); err != nil {
 		return nil, fmt.Errorf("cannot get year exchange rate for %v from %v: %v", item.Currency, item.Date, err)
 	}
-	return &item, nil
+	return validateStockBuyItem(&item)
 }
 
 func newStockSellItem(row []string) (_ *TransactionLogItem, err error) {
@@ -106,6 +106,7 @@ func newStockSellItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.BankAmount, err = strconv.ParseFloat(row[stockSellTblLegend["RECEIVED"]], 64); err != nil {
 		return nil, fmt.Errorf("received is not a number: %v", err)
 	}
+	item.OriginalBankAmount = item.BankAmount
 	if item.BrokerAmount, err = strconv.ParseFloat(row[stockSellTblLegend["AMOUNT"]], 64); err != nil {
 		return nil, fmt.Errorf("amount is not a number: %v", err)
 	}
@@ -124,7 +125,7 @@ func newStockSellItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.YearExchangeRate, err = util.GetCzkExchangeRateInYear(item.Date, *item.Currency); err != nil {
 		return nil, fmt.Errorf("cannot get year exchange rate for %v from %v: %v", item.Currency, item.Date, err)
 	}
-	return &item, nil
+	return validateStockSellItem(&item)
 }
 
 func newStockDividendItem(row []string) (_ *TransactionLogItem, err error) {
@@ -159,12 +160,41 @@ func newStockDividendItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.Country == "" {
 		return nil, fmt.Errorf("cannot get country")
 	}
-	paidTax := 1 - (item.BankAmount / item.BrokerAmount)
-	if !leqWithTolerance(paidTax, MaxAllowedTax, 0.0001) {
-		item.BankAmount = item.BrokerAmount * (1 - MaxAllowedTax)
-		log.Warnf("Paid tax '%v' exceeds max allowed tax '%v' for item (%v) - adjusting Bank Amount according to %f", paidTax, MaxAllowedTax, item, item.BankAmount)
+	return validateDividendItem(&item)
+}
+
+
+func validateStockBuyItem(item *TransactionLogItem) (_ *TransactionLogItem, err error) {
+	if !util.LeqWithTolerance(item.BrokerAmount, item.BankAmount, 0.0001) {
+		return nil,  fmt.Errorf("Bank amount (PAID) is greater than Broker amount (AMOUNT) for item '%v'", item)
 	}
-	return &item, nil
+	if !util.EqWithTolerance(item.BrokerAmount + item.Fee, item.BankAmount, 0.0001) {
+		return nil, fmt.Errorf("Bank amount (PAID) is not equal to Broker amount (AMOUNT) + Fee for item '%v'", item)
+	}
+	return item, nil
+}
+
+func validateStockSellItem(item *TransactionLogItem) (_ *TransactionLogItem, err error) {
+	if !util.LeqWithTolerance(item.BankAmount, item.BrokerAmount, 0.0001) {
+		return nil,  fmt.Errorf("Bank amount (RECEIVED) is greater than Broker amount (AMOUNT) for item '%v'", item)
+	}
+	if !util.EqWithTolerance(item.BankAmount, item.BrokerAmount - item.Fee, 0.0001) {
+		return nil, fmt.Errorf("Bank amount (PAID) is not equal to Broker amount (AMOUNT) - Fee for item '%v'", item)
+	}
+	return item, nil
+}
+
+
+func validateDividendItem(item *TransactionLogItem) (_ *TransactionLogItem, err error) {
+	_, err = validateStockSellItem(item)
+	if err == nil {
+		paidTax := 1 - (item.BankAmount / item.BrokerAmount)
+		if !util.LeqWithTolerance(paidTax, MaxAllowedTax, 0.0001) {
+			item.BankAmount = item.BrokerAmount * (1 - MaxAllowedTax)
+			fmt.Errorf("Paid tax '%v' exceeds max allowed tax '%v' for item '%v' - adjusting Bank Amount according to %f", paidTax, MaxAllowedTax, item, item.BankAmount)
+		}
+	}
+	return item, nil
 }
 
 func ProcessStocks(filePath string) (_ *TransactionLog, err error) {
@@ -215,12 +245,4 @@ func ProcessStocks(filePath string) (_ *TransactionLog, err error) {
 	log.Infof("%ss: Ingested Additional Fees (count: %d)", StockItemType, len(transactions.AdditionalFees))
 
 	return &transactions, nil
-}
-
-func leqWithTolerance(a, b, tolerance float64) bool {
-	if diff := math.Abs(a - b); diff < tolerance {
-		return true
-	} else {
-		return a < b
-	}
 }

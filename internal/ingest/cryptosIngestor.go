@@ -54,6 +54,7 @@ func newCryptoBuyItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.BankAmount, err = strconv.ParseFloat(row[cryptoBuyTblLegend["PAID"]], 64); err != nil {
 		return nil, fmt.Errorf("paid is not a number: %v", err)
 	}
+	item.OriginalBankAmount = item.BankAmount
 	if item.BrokerAmount, err = strconv.ParseFloat(row[cryptoBuyTblLegend["AMOUNT"]], 64); err != nil {
 		return nil, fmt.Errorf("amount is not a number: %v", err)
 	}
@@ -72,7 +73,7 @@ func newCryptoBuyItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.YearExchangeRate, err = util.GetCzkExchangeRateInYear(item.Date, *item.Currency); err != nil {
 		return nil, fmt.Errorf("cannot get year exchange rate for %v from %v: %v", item.Currency, item.Date, err)
 	}
-	return &item, nil
+	return validateCryptoBuyItem(&item)
 }
 
 func newCryptoSellItem(row []string) (_ *TransactionLogItem, err error) {
@@ -93,6 +94,7 @@ func newCryptoSellItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.BankAmount, err = strconv.ParseFloat(row[cryptoSellTblLegend["RECEIVED"]], 64); err != nil {
 		return nil, fmt.Errorf("received is not a number: %v", err)
 	}
+	item.OriginalBankAmount = item.BankAmount
 	if item.BrokerAmount, err = strconv.ParseFloat(row[cryptoSellTblLegend["AMOUNT"]], 64); err != nil {
 		return nil, fmt.Errorf("amount is not a number: %v", err)
 	}
@@ -111,7 +113,27 @@ func newCryptoSellItem(row []string) (_ *TransactionLogItem, err error) {
 	if item.YearExchangeRate, err = util.GetCzkExchangeRateInYear(item.Date, *item.Currency); err != nil {
 		return nil, fmt.Errorf("cannot get year exchange rate for %v from %v: %v", item.Currency, item.Date, err)
 	}
-	return &item, nil
+	return validateCryptoSellItem(&item)
+}
+
+func validateCryptoBuyItem(item *TransactionLogItem) (_ *TransactionLogItem, err error) {
+	if !util.LeqWithTolerance(item.BrokerAmount, item.BankAmount, 0.0001) {
+		return nil, fmt.Errorf("Broker amount (AMOUNT) is greater than Bank amount (PAID) for item '%v'", item)
+	}
+	if !util.EqWithTolerance(item.BrokerAmount + item.Fee, item.BankAmount, 0.0001) {
+		return nil, fmt.Errorf("Bank amount (PAID) is not equal to Broker amount (AMOUNT) + Fee for item '%v'", item)
+	}
+	return item, nil
+}
+
+func validateCryptoSellItem(item *TransactionLogItem) (_ *TransactionLogItem, err error) {
+	if !util.LeqWithTolerance(item.BankAmount, item.BrokerAmount, 0.0001) {
+		return nil, fmt.Errorf("Bank amount (RECEIVED) is greater than Broker amount (AMOUNT) for item '%v'", item)
+	}
+	if !util.EqWithTolerance(item.BankAmount, item.BrokerAmount - item.Fee, 0.0001) {
+		return nil, fmt.Errorf("Bank amount (PAID) is not equal to Broker amount (AMOUNT) - Fee for item '%v'", item)
+	}
+	return item, nil
 }
 
 func ProcessCryptos(filePath string) (_ *TransactionLog, err error) {
