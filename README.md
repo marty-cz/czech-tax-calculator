@@ -2,16 +2,25 @@
 
 Go console application which processes buys, sells, dividends, additional income and fees of Stocks and Crypto currencies and creates "Tax Year Report" using **Czech** law and output currency.
 
-When executed it generates reports for each year (with some revenue) in Excel format. The file contains separate sheets for Stocks and Cryptocurrency overview.
+When executed, the application creates a report in Excel format for each year with some revenue. The report contains separate sheets for both the Stocks and Cryptocurrency overviews.
 
 ## Taxes from Czech law point of view
 
 It is mandatory to file taxes of year profit:
 
-* if year  *stocks* (real *stocks*, *ETF*s, *fonds* or *bonds*) revenue is more than 100,000 CZK
+* if year *stocks* (real *stocks*, *ETF*s, *fonds* or *bonds*) revenue is more than 100,000 CZK
 * or if year *other* (*cryptos*, *dividends*, *CFD*s, ...) revenue is more than 6,000 CZK
 
 The revenue might be lowered by revenue of *stocks* (real *stocks*/*ETF*s/...) hold more than 3 years. In case of this time tested revenue is more than 5,000,000 CZK it needs to be noted (but no tax is paid).
+
+### How To Fill the Tax Return Document?
+
+* *Dividens* revenue is filled into line no. 38 ("Dílčí základ daně z kapitálového majetku podle § 8 zákona"). In cases where the dividend has already been taxed by the broker, it still needs to be listed in the report. However, the process can be a bit more complicated, as more information must be filled into a third attachment.- "2. Příjmy ze zdrojů v zahraničí – metoda zápočtu daně zaplacené v zahraničí".
+* *Stocks* revenue is filled in 2nd attachment table under "C - prodej cenných papírů".
+* *Cryptocurrencies* revenue is filled in 2nd attachment table under "F - příjmy z úplatného převodu jiné věci". Additionally, it's important to note that even if the overall profit results in a loss, it still needs to be listed in the report.
+* An *additional* revenue is in 2nd attachment table under "A - příležitostná činnost".
+
+It's important to note that losses cannot be subtracted from the overall profit. Instead, this is only allowed within each category. For instance, let's say there is a profit of \$100 from selling stocks and a loss of \$50 from selling cryptocurrencies. In this case, the overall profit subject to tax is still \$100.
 
 ### Exchange Rate
 
@@ -33,7 +42,7 @@ So, there are also two options how to calculate purchase price but they have to 
 
 ### Cryptocurrencies
 
-Cryptocurrencies are treated as an *Intangible moving asset* ("Nehmotný movitý majetek") => *Other income* ("Ostatní příjmy") by Czech law (at least in 2022). In the tax statements they should be listed under "F - příjmy z úplatného převodu jiné věci".
+Cryptocurrencies are treated as an *Intangible moving asset* ("Nehmotný movitý majetek") => *Other income* ("Ostatní příjmy") by Czech law (at least in 2022).
 
 This means there is no time test available and it is not possible to combine profit from stocks and cryptos!
 
