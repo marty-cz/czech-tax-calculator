@@ -21,7 +21,7 @@ func NewExcelWriter() *ExcelWriter {
 	}
 
 	w.floatCellStyle, _ = w.File.NewStyle(&excelize.Style{
-		DecimalPlaces: 2,
+		DecimalPlaces: GetIntPointer(2),
 	})
 	dateFormat := "dd.mm.yyyy"
 	w.dateCellStyle, _ = w.File.NewStyle(&excelize.Style{
@@ -68,4 +68,8 @@ func (w ExcelWriter) WriteAccountingEqCell(sheet string, row, col int, equation 
 	w.File.SetCellFormula(sheet, coords, equation)
 	w.File.SetCellStyle(sheet, coords, coords, w.accountingCellStyleMap[currency])
 	return
+}
+
+func GetIntPointer(value int) *int {
+	return &value
 }
