@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	req "github.com/imroc/req/v3"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -137,7 +138,7 @@ func GetCzkExchangeRateInDay(date time.Time, currency Currency) (float64, error)
 	rate := -1.0
 	dateString := date.Format(DATE_FORMAT_FOR_CNB_DAY)
 	dateBeforeString := ""
-	resp, err := http.Get(CNB_DAY_URL + dateString)
+	resp, err := req.Get(CNB_DAY_URL + dateString)
 	if err != nil {
 		return rate, err
 	}
