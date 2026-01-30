@@ -166,7 +166,7 @@ func newStockDividendItem(row []string) (_ *TransactionLogItem, err error) {
 
 func validateStockBuyItem(item *TransactionLogItem) (_ *TransactionLogItem, err error) {
 	if !util.LeqWithTolerance(item.BrokerAmount, item.BankAmount, 0.0001) {
-		return nil,  fmt.Errorf("Bank amount (PAID) is greater than Broker amount (AMOUNT) for item '%v'", item)
+		return nil, fmt.Errorf("Bank amount (PAID) is greater than Broker amount (AMOUNT) for item '%v'", item)
 	}
 	if !util.EqWithTolerance(item.BrokerAmount + item.Fee, item.BankAmount, 0.0001) {
 		return nil, fmt.Errorf("Bank amount (PAID) is not equal to Broker amount (AMOUNT) + Fee for item '%v'", item)
@@ -176,7 +176,7 @@ func validateStockBuyItem(item *TransactionLogItem) (_ *TransactionLogItem, err 
 
 func validateStockSellItem(item *TransactionLogItem) (_ *TransactionLogItem, err error) {
 	if !util.LeqWithTolerance(item.BankAmount, item.BrokerAmount, 0.0001) {
-		return nil,  fmt.Errorf("Bank amount (RECEIVED) is greater than Broker amount (AMOUNT) for item '%v'", item)
+		return nil, fmt.Errorf("Bank amount (RECEIVED) is greater than Broker amount (AMOUNT) for item '%v'", item)
 	}
 	if !util.EqWithTolerance(item.BankAmount, item.BrokerAmount - item.Fee, 0.0001) {
 		return nil, fmt.Errorf("Bank amount (PAID) is not equal to Broker amount (AMOUNT) - Fee for item '%v'", item)
@@ -186,19 +186,18 @@ func validateStockSellItem(item *TransactionLogItem) (_ *TransactionLogItem, err
 
 
 func validateDividendItem(item *TransactionLogItem) (_ *TransactionLogItem, err error) {
-	_, err = validateStockSellItem(item)
-	if err == nil {
-		paidTax := 1 - (item.BankAmount / item.BrokerAmount)
-		if !util.LeqWithTolerance(paidTax, MaxAllowedTax, 0.0001) {
-			item.BankAmount = item.BrokerAmount * (1 - MaxAllowedTax)
-			fmt.Errorf("Paid tax '%v' exceeds max allowed tax '%v' for item '%v' - adjusting Bank Amount according to %f", paidTax, MaxAllowedTax, item, item.BankAmount)
-		}
+	if !util.LeqWithTolerance(item.BankAmount, item.BrokerAmount, 0.0001) {
+		return nil, fmt.Errorf("Bank amount (RECEIVED) is greater than Broker amount (AMOUNT) for item '%v'", item)
 	}
+	paidTax := 1 - (item.BankAmount / item.BrokerAmount)
+	if !util.LeqWithTolerance(paidTax, MaxAllowedTax, 0.01) {
+		item.BankAmount = item.BrokerAmount * (1 - MaxAllowedTax)
+		log.Warnf("Paid tax '%f' exceeds max allowed tax '%v' for item '%v' - adjusting Bank Amount to %f", paidTax, MaxAllowedTax, item, item.BankAmount)
+	}	
 	return item, nil
 }
 
 func ProcessStocks(filePath string) (_ *TransactionLog, err error) {
-
 	log.Infof("%ss: processing input file '%s'", StockItemType, filePath)
 
 	f, err := excel.OpenFile(filePath)
